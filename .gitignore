@@ -1,0 +1,52 @@
+# ======================
+# Python
+# ======================
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ======================
+# Jupyter
+# ======================
+.ipynb_checkpoints/
+
+# ======================
+# ML / Data
+# ======================
+data/
+results/
+*.pkl
+*.csv
+*.xlsx
+scan_results.json
+scanned_images.json
+
+# ======================
+# Node / Next.js
+# ======================
+node_modules/
+.next/
+out/
+dist/
+
+# ======================
+# OS / IDE
+# ======================
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ======================
+# AWS / Binaries
+# ======================
+aws/
+awscli2.zip
+awscliv2.zip
+ecr-batch-delete-image
+
+# ======================
+# Logs
+# ======================
+*.log
+
