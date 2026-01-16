@@ -20,7 +20,7 @@ ACCOUNT_ID = "586098609652"
 
 # Public Docker Hub config (example: ubuntu)
 # Public Docker Hub config
-DOCKER_HUB_REPO = "hirufernando275/public-test"  # YOUR Docker Hub repo
+DOCKER_HUB_REPO = "hirufernando275/tiny-ml-test"
 DOCKER_HUB_TAGS_URL = f"https://hub.docker.com/v2/repositories/{DOCKER_HUB_REPO}/tags"
 
 POLL_INTERVAL = 60  # seconds
@@ -69,28 +69,19 @@ def run_scan(image_name: str, source: str):
     result = scan_image(image_name)
     result["image_name"] = image_name
     result["timestamp"] = datetime.now(timezone.utc).isoformat()
+    result["image_tag"] = image_name.split(":")[-1]  # optional, extract tag
 
     print("\n--- ML Scan Result ---")
     for k, v in result.items():
         print(f"{k}: {v}")
 
-    # Send to dashboard (safe)
-    if DASHBOARD_API_URL:
-        try:
-            response = requests.post(DASHBOARD_API_URL, json=result, timeout=3)
-            if response.status_code == 200:
-                print("✅ Result sent to dashboard")
-            else:
-                print(f"⚠️ Dashboard returned status: {response.status_code}")
-        except Exception as e:
-            print(f"⚠️ Dashboard error (ignored): {e}")
-    #  MySQL
     try:
         save_result_to_db(image_name, source, result)
     except Exception as e:
-        print(f"❌ Failed to save result to DB (ignored): {e}")
+        print(f"❌ Failed to save result to DB: {e}")
 
     return result
+
 
 
 # ---------------- ECR FUNCTIONS ----------------
@@ -130,11 +121,17 @@ def get_public_images():
     try:
         response = requests.get(DOCKER_HUB_TAGS_URL, timeout=5)
         data = response.json()
-        # Return full image name with your Docker Hub username
-        return [f"{DOCKER_HUB_REPO}:{tag['name']}" for tag in data.get("results", [])]
+
+        print("🐳 Docker Hub raw response:", data)
+
+        return [
+            f"{DOCKER_HUB_REPO}:{tag['name']}"
+            for tag in data.get("results", [])
+        ]
     except Exception as e:
         print(f"❌ Failed to fetch Docker Hub tags: {e}")
         return []
+
 
 
 
@@ -159,9 +156,9 @@ def get_db_connection():
     try:
         conn = mysql.connector.connect(
             host="localhost",
-            user="hirushi",                  # <-- your user
-            password="MyStrongPass123!",     # <-- your password
-            database="docker_scanner"
+            user="scanner_user",
+            password="StrongPass123!",
+            database="scanner_db"
         )
         return conn
     except mysql.connector.Error as e:
@@ -174,38 +171,62 @@ def save_result_to_db(image_name, source, result):
     conn = get_db_connection()
     if not conn:
         return
+    
+    registry_type = "public" if source.lower() in ["dockerhub", "public"] else "private"
 
     try:
         cursor = conn.cursor()
+
         insert_query = """
         INSERT INTO scan_results
-        (image_name, registry_type, scan_time, vulnerabilities,
-         anomaly_detected, severity, decision, result_json,
-         supervised_explanation, regression_explanation,
-         classification_explanation, unsupervised_explanation,
-         model_decision, ml_timestamp)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        cursor.execute(insert_query, (
+        (
             image_name,
-            source,  # registry_type (ECR / DockerHub)
-            datetime.now(),  # scan_time
-            result.get("predicted_vulnerabilities"),
-            result.get("anomaly_detected"),
-            result.get("severity"),
-            result.get("decision"),
-            json.dumps(result),
-            result.get("supervised_explanation"),
-            result.get("Regression explanation"),
-            result.get("Classification explanation"),
-            result.get("unsupervised_explanation"),
-            result.get("Final Model Decision"),
-            result.get("timestamp")  # ML timestamp
-        ))
+            image_tag,
+            registry_type,
+            scan_time,
+            vulnerabilities,
+            critical_count,
+            high_count,
+            medium_count,
+            low_count,
+            decision,
+            supervised_explanation,
+            classification_explanation,
+            unsupervised_explanation,
+            interpretation,
+            model_decision,
+            ml_timestamp
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+
+        cursor.execute(insert_query, (
+        image_name,
+        result.get("image_tag"),
+        registry_type,
+        datetime.now(),
+        result.get("predicted_vulnerabilities"),
+        result.get("critical_count"),
+        result.get("high_count"),
+        result.get("medium_count"),
+        result.get("low_count"),
+        result.get("decision"),
+        json.dumps(result.get("supervised_explanation")),
+        json.dumps(result.get("classification_explanation")),
+        json.dumps(result.get("unsupervised_explanation")),
+        result.get("interpretation"),
+        result.get("model_decision"),
+        result.get("timestamp")
+    ))
+
+
         conn.commit()
         print(f"✅ Scan result saved to DB for {image_name}")
+
     except Error as e:
         print(f"❌ Failed to insert into DB: {e}")
+
     finally:
         cursor.close()
         conn.close()

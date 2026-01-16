@@ -1,6 +1,8 @@
 import docker
 
-client = docker.from_env()
+def get_docker_client():
+    return docker.from_env()
+
 
 def extract_features_from_image(image_name: str) -> dict:
     """

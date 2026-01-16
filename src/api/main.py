@@ -22,7 +22,7 @@ app = FastAPI(
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later restrict to frontend URL
+    allow_origins=["http://localhost:3000"],  # your Next.js dev URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,8 +35,8 @@ def get_db_connection():
     try:
         return mysql.connector.connect(
             host="localhost",
-            user="root",
-            password="yourpassword",
+            user="scanner_user",
+            password="StrongPass123!",
             database="scanner_db"
         )
     except Error as e:
