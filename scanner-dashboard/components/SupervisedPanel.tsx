@@ -2,19 +2,62 @@
 
 interface SupervisedPanelProps {
   scan: {
-    regression_explanation?: string | string[];
+    supervised_explanation?: string | string[];
     classification_explanation?: string | string[];
-    model_decision?: "SECURE" | "NOT SECURE";
+    model_decision?: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
   };
 }
 
 export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
   if (!scan) return null;
 
-  const regressionPoints = normalizeToArray(scan.regression_explanation);
-  const classificationPoints = normalizeToArray(scan.classification_explanation);
+  const supervisedText: string =
+  scan.supervised_explanation && Array.isArray(scan.supervised_explanation)
+    ? scan.supervised_explanation.join("\n")
+    : scan.supervised_explanation || "";
 
-  const isSecure = scan.model_decision === "SECURE";
+    // Split regression vs classification
+    let regressionText = "";
+    let classificationText = "";
+
+    const classIndex = supervisedText.indexOf("Classification explanation:");
+    if (classIndex !== -1) {
+      regressionText = supervisedText
+        .slice(0, classIndex)
+        // Remove the first line "Image has an estimated..." and "Regression explanation:"
+        .replace(/[\s\S]*?Regression explanation:/, "")
+        .replace(/Interpretation:[\s\S]*/, "")
+        .trim();
+
+      classificationText = supervisedText
+        .slice(classIndex + "Classification explanation:".length)
+        .replace(/Interpretation:[\s\S]*/, "")
+        .trim();
+    } else {
+      regressionText = supervisedText.replace(/[\s\S]*?Regression explanation:/, "").trim();
+      classificationText = "";
+
+}
+
+  // Convert escaped \n to real newlines
+  const regressionPoints = regressionText
+    .replace(/\\n/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const classificationPoints = classificationText
+    .replace(/\\n/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+
+
+
+  const isSecure =
+  scan.model_decision === "SECURE" || scan.model_decision === "NORMAL";
+
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 space-y-6 flex flex-col h-96">
@@ -34,10 +77,16 @@ export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
             Regression Explanation:
           </h4>
 
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-            {regressionPoints.length ? regressionPoints.map((item, i) => <li key={i}>{item}</li>)
-              : <li className="text-gray-400">No regression explanation available</li>}
-          </ul>
+          <div className="space-y-1 text-sm text-gray-700">
+            {regressionPoints.length ? (
+              regressionPoints.map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))
+            ) : (
+              <p className="text-gray-400">No regression explanation available</p>
+            )}
+          </div>
+
           <div className="mt-2 h-px bg-gray-200" />
         </div>
 
@@ -47,10 +96,15 @@ export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
             Classification Explanation:
           </h4>
 
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-            {classificationPoints.length ? classificationPoints.map((item, i) => <li key={i}>{item}</li>)
-              : <li className="text-gray-400">No classification explanation available</li>}
-          </ul>
+          <div className="space-y-1 text-sm text-gray-700">
+            {classificationPoints.length ? (
+              classificationPoints.map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))
+            ) : (
+              <p className="text-gray-400">No classification explanation available</p>
+            )}
+          </div>
         </div>
 
         {/* FINAL STATUS */}
@@ -59,7 +113,7 @@ export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
             className={`px-6 py-3 rounded-lg font-semibold text-md text-white
             bg-blue-800`}
           >
-            Final Status: {isSecure ? "SECURE" : "NOT SECURE"}
+            Final Status: {scan.model_decision ?? "UNKNOWN"}
           </span>
         </div>
       </div>

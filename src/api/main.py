@@ -94,18 +94,20 @@ def get_scan_results(limit: int = 20):
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT
-                id,
                 image_name,
+                image_tag,
                 registry_type,
                 scan_time,
-                vulnerabilities,
-                anomaly_detected,
-                severity,
+                predicted_vulnerabilities,
+                critical_count,
+                high_count,
+                medium_count,
+                low_count,
                 decision,
                 supervised_explanation,
-                regression_explanation,
                 classification_explanation,
                 unsupervised_explanation,
+                interpretation,
                 model_decision,
                 ml_timestamp
             FROM scan_results
@@ -113,12 +115,9 @@ def get_scan_results(limit: int = 20):
             LIMIT %s
         """, (limit,))
 
-        results = cursor.fetchall()
-        return results
-
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return cursor.fetchall()
 
     finally:
         cursor.close()
         conn.close()
+

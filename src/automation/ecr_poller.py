@@ -65,22 +65,40 @@ def pull_image(image_uri: str):
         print(f"✅ Pulled image: {image_uri}")
 
 
+# ---------------- RUN SCAN ----------------
 def run_scan(image_name: str, source: str):
+    # Extract features and scan
+    features = extract_features_from_image(image_name)
     result = scan_image(image_name)
-    result["image_name"] = image_name
-    result["timestamp"] = datetime.now(timezone.utc).isoformat()
-    result["image_tag"] = image_name.split(":")[-1]  # optional, extract tag
+
+
+    # Normalize result keys for UI and DB
+    db_result = {
+        "image_name": image_name,
+        "image_tag": image_name.split(":")[-1],
+        "registry_type": "public" if source.lower() in ["dockerhub", "public"] else "private",
+        "predicted_vulnerabilities": result.get("predicted_vulnerabilities", 0),
+        "critical_count": result.get("critical_count", 0),
+        "high_count": result.get("high_count", 0),
+        "medium_count": result.get("medium_count", 0),
+        "low_count": result.get("low_count", 0),
+        "decision": result.get("decision", "DENY"),
+        "supervised_explanation": result.get("supervised_explanation") or [],
+        "classification_explanation": result.get("classification_explanation") or [],
+        "unsupervised_explanation": result.get("unsupervised_explanation") or [],
+        "interpretation": result.get("interpretation", ""),
+        "model_decision": result.get("model_decision", "NOT SECURE"),
+        "ml_timestamp": result.get("ml_timestamp"),
+        "scan_time": result.get("scan_time") or datetime.now(timezone.utc)
+    }
+
 
     print("\n--- ML Scan Result ---")
-    for k, v in result.items():
+    for k, v in db_result.items():
         print(f"{k}: {v}")
 
-    try:
-        save_result_to_db(image_name, source, result)
-    except Exception as e:
-        print(f"❌ Failed to save result to DB: {e}")
-
-    return result
+    save_result_to_db(image_name, source, db_result)
+    return db_result
 
 
 
@@ -119,7 +137,7 @@ def poll_ecr():
 # ---------------- DOCKER HUB FUNCTIONS ----------------
 def get_public_images():
     try:
-        response = requests.get(DOCKER_HUB_TAGS_URL, timeout=5)
+        response = requests.get(DOCKER_HUB_TAGS_URL, timeout=15)
         data = response.json()
 
         print("🐳 Docker Hub raw response:", data)
@@ -167,6 +185,7 @@ def get_db_connection():
 
 
 
+# ---------------- SAVE TO DB ----------------
 def save_result_to_db(image_name, source, result):
     conn = get_db_connection()
     if not conn:
@@ -174,52 +193,63 @@ def save_result_to_db(image_name, source, result):
     
     registry_type = "public" if source.lower() in ["dockerhub", "public"] else "private"
 
+    # Prepare explanations as JSON arrays
+    supervised_expl = result.get("supervised_explanation") or []
+    classification_expl = result.get("classification_explanation") or []
+    unsupervised_expl = result.get("unsupervised_explanation") or []
+
+    # Convert to JSON string for MySQL
+    supervised_expl_json = json.dumps(supervised_expl, ensure_ascii=False)
+    classification_expl_json = json.dumps(classification_expl, ensure_ascii=False)
+    unsupervised_expl_json = json.dumps(unsupervised_expl, ensure_ascii=False)
+
+
+    # Use scan_time or current UTC
+    scan_time = result.get("scan_time") or datetime.now(timezone.utc)
+
+    # ----- FIXED: MAP model_decision TO decision -----
+    model_decision = result.get("model_decision", "NOT SECURE")
+    if model_decision == "SECURE":
+        decision = "ALLOW"
+    elif model_decision == "NOT SECURE":
+        decision = "DENY"
+    elif model_decision in ["ANOMALY", "NORMAL"]:
+        # Optional: set rules for anomaly detection
+        decision = "DENY" if model_decision == "ANOMALY" else "ALLOW"
+    else:
+        decision = "DENY"  # fallback safety
+
     try:
         cursor = conn.cursor()
 
         insert_query = """
-        INSERT INTO scan_results
-        (
-            image_name,
-            image_tag,
-            registry_type,
-            scan_time,
-            vulnerabilities,
-            critical_count,
-            high_count,
-            medium_count,
-            low_count,
-            decision,
-            supervised_explanation,
-            classification_explanation,
-            unsupervised_explanation,
-            interpretation,
-            model_decision,
-            ml_timestamp
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO scan_results (
+            image_name, image_tag, registry_type, predicted_vulnerabilities,
+            critical_count, high_count, medium_count, low_count,
+            decision, supervised_explanation, classification_explanation,
+            unsupervised_explanation, interpretation, model_decision,
+            ml_timestamp, scan_time
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-
-
+        
         cursor.execute(insert_query, (
-        image_name,
-        result.get("image_tag"),
-        registry_type,
-        datetime.now(),
-        result.get("predicted_vulnerabilities"),
-        result.get("critical_count"),
-        result.get("high_count"),
-        result.get("medium_count"),
-        result.get("low_count"),
-        result.get("decision"),
-        json.dumps(result.get("supervised_explanation")),
-        json.dumps(result.get("classification_explanation")),
-        json.dumps(result.get("unsupervised_explanation")),
-        result.get("interpretation"),
-        result.get("model_decision"),
-        result.get("timestamp")
-    ))
-
+            result["image_name"],
+            result["image_tag"],
+            registry_type,
+            result["predicted_vulnerabilities"],
+            result.get("critical_count", 0),
+            result.get("high_count", 0),
+            result.get("medium_count", 0),
+            result.get("low_count", 0),
+            decision,
+            supervised_expl_json,
+            classification_expl_json,
+            unsupervised_expl_json,
+            result.get("interpretation", ""),
+            result.get("model_decision", "NOT SECURE"),
+            result.get("ml_timestamp"),
+            scan_time
+        ))
 
         conn.commit()
         print(f"✅ Scan result saved to DB for {image_name}")

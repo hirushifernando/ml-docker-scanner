@@ -5,9 +5,10 @@ interface ScanSummaryCardProps {
     image_name: string;
     image_tag?: string;
     registry_type: "public" | "private";
-    vulnerabilities: number;
+    predicted_vulnerabilities: number;
     scan_time: string;
     decision: "ALLOW" | "DENY";
+    model_decision: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
     critical_count?: number;
     high_count?: number;
     medium_count?: number;
@@ -15,10 +16,13 @@ interface ScanSummaryCardProps {
   };
 }
 
+
 export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
   if (!scan) return null;
 
-  const isSecure = scan.decision === "ALLOW";
+  const isSecure =
+  scan.model_decision === "SECURE" || scan.model_decision === "NORMAL";
+
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 flex justify-between items-center gap-6">
@@ -33,8 +37,10 @@ export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
           </h2>
 
           <p className="text-md font-semibold text-gray-700 mt-1">
-            Detected Vulnerability Count: <strong>{scan.vulnerabilities ?? 0}</strong>
+            Estimated Vulnerability Risk Score:{" "}
+            <strong>{Math.max(0, scan.predicted_vulnerabilities ?? 0)}</strong>
           </p>
+
 
           {scan.scan_time && (
             <p className="text-sm text-gray-400 mt-1">
@@ -67,7 +73,7 @@ export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
                 : "bg-red-200 text-red-700"
             }`}
           >
-            Status: {isSecure ? "SECURE" : "NOT SECURE"}
+            Status:  {scan.model_decision}
           </div>
 
           {/* Shield Image */}
@@ -79,15 +85,16 @@ export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
         </div>
 
         {/* ACTION BUTTON */}
-        {isSecure ? (
-          <button className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition">
-            Allow for Deployment
+        {scan.decision === "ALLOW" ? (
+          <button className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold">
+            Allowed for Deployment
           </button>
         ) : (
-          <button className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition">
-            Deny Deployment
+          <button className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold">
+            Denied for Deployment
           </button>
         )}
+
       </div>
 
     </div>

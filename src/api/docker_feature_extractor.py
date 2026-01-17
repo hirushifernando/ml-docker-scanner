@@ -56,7 +56,7 @@ def extract_features_from_image(image_name: str) -> dict:
 
     # Return features compatible with scan_image
     return {
-        "Size": str(size_mb),
+        "Size": size_mb,
         "Package_Manager": package_manager,
         "Base_Image": base_image,
         "layers": layers,

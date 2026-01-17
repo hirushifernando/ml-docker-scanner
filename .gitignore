@@ -50,3 +50,4 @@ ecr-batch-delete-image
 # ======================
 *.log
 
+tiny-app/

@@ -21,32 +21,25 @@ export async function GET() {
     await conn.end();
 
     // Map over rows to parse result_json
-    const data = rows.map((row) => {
-    const parsedResult =
-      row.result_json && typeof row.result_json === "string"
-        ? JSON.parse(row.result_json)
-        : row.result_json || {};
-
-    return {
-      id: row.id,
+    const data = rows.map((row) => ({
       image_name: row.image_name,
+      image_tag: row.image_tag,
       registry_type: row.registry_type,
-      vulnerabilities: parsedResult.predicted_vulnerabilities || 0,
-      anomaly_detected: parsedResult.anomaly_detected || false,
-      severity: row.severity,
+      predicted_vulnerabilities: row.predicted_vulnerabilities,
+      critical_count: row.critical_count,
+      high_count: row.high_count,
+      medium_count: row.medium_count,
+      low_count: row.low_count,
       decision: row.decision,
-      supervised_explanation: parsedResult.supervised_explanation || null,
-      regression_explanation: parsedResult.regression_explanation || null,
-      classification_explanation: parsedResult.classification_explanation || null,
-      unsupervised_explanation: parsedResult.unsupervised_explanation || null,
-      model_decision: parsedResult.model_decision || null,
-      ml_timestamp: parsedResult.timestamp || null,
-      Critical: parsedResult.Critical || 0,
-      High: parsedResult.High || 0,
-      Medium: parsedResult.Medium || 0,
-      Low: parsedResult.Low || 0,
-    };
-  });
+      supervised_explanation: row.supervised_explanation,
+      classification_explanation: row.classification_explanation,
+      unsupervised_explanation: row.unsupervised_explanation,
+      interpretation: row.interpretation,
+      model_decision: row.model_decision,
+      ml_timestamp: row.ml_timestamp,
+      scan_time: row.scan_time
+  }));
+
 
 
 

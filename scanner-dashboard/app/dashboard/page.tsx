@@ -22,6 +22,10 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    console.log("SCAN RESULTS FROM API:", scanResults);
+  }, [scanResults]);
+
 
   if (loading) {
     return <p className="p-6 text-gray-500">Loading scan results...</p>;

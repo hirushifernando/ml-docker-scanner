@@ -8,7 +8,24 @@ interface UnsupervisedPanelProps {
 export default function UnsupervisedPanel({ scan }: UnsupervisedPanelProps) {
   if (!scan) return null;
 
-  const explanationPoints = normalizeToArray(scan.unsupervised_explanation);
+  const unsupervisedText =
+  scan.unsupervised_explanation && Array.isArray(scan.unsupervised_explanation)
+    ? scan.unsupervised_explanation.join("\n")
+    : scan.unsupervised_explanation || "";
+
+    // Remove Interpretation part completely
+    const anomalyText = unsupervisedText
+      .replace(/^"+|"+$/g, "")      
+      .replace(/Interpretation:[\s\S]*/, "")
+      .trim();
+
+    // Convert escaped \n → real newlines, then split
+    const anomalyPoints = anomalyText
+      .replace(/\\n/g, "\n")
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean);
+
   const isNormal = scan.model_decision === "NORMAL";
 
   return (
@@ -30,14 +47,19 @@ export default function UnsupervisedPanel({ scan }: UnsupervisedPanelProps) {
             Anomaly Explanation:
           </h4>
 
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-            {explanationPoints.length ? explanationPoints.map((item, i) => <li key={i}>{item}</li>)
-              : <li className="text-gray-400">No unsupervised explanation available</li>}
-          </ul>
+          <div className="space-y-1 text-sm text-gray-700">
+            {anomalyPoints.length ? (
+              anomalyPoints.map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))
+            ) : (
+              <p className="text-gray-400">No anomaly explanation available</p>
+            )}
+          </div>
         </div>
 
         {/* FINAL STATUS */}
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-10">
           <span
             className={`px-6 py-3 rounded-lg font-semibold text-md text-white
             bg-blue-800`}
@@ -59,3 +81,5 @@ function normalizeToArray(input?: string | string[]): string[] {
   if (Array.isArray(input)) return input;
   return input.split("\n").map(l => l.trim()).filter(Boolean);
 }
+
+

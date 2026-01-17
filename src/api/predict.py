@@ -34,7 +34,8 @@ def scan_image(image_name: str):
         X_reg = preprocess_supervised(image_name, task="regression")
 
         secure_prediction = int(clf_model.predict(X_clf)[0])
-        vulnerability_count = int(reg_model.predict(X_reg)[0])
+        raw_prediction = reg_model.predict(X_reg)[0]
+        vulnerability_count = max(0, round(raw_prediction))
 
         # -------- Unsupervised --------
         X_unsup = preprocess_unsupervised(image_name)
@@ -53,51 +54,32 @@ def scan_image(image_name: str):
             shap_clf_row=shap_clf
         )
 
-        classification_explanation = [
-            f"{k} = {v:.2f} increased insecurity risk"
-            for k, v in zip(X_clf.columns, shap_clf)
-        ]
-
+        anomaly_label = "anomalous" if anomaly_result == -1 else "normal"
 
         unsupervised_explanation = generate_human_readable_unsupervised_text(
             row=X_unsup.iloc[0],
-            anomaly_label="ANOMALY" if anomaly_result == -1 else "NORMAL",
+            anomaly_label=anomaly_label,
             shap_row=shap_unsup,
             feature_names=X_unsup.columns
         )
 
-
         # -------- Decision --------
         if anomaly_result == -1 or secure_prediction == 0:
-            decision = "DENY"
-            model_decision = "NOT SECURE"
+            decision = "BLOCK"
             severity = "HIGH"
         else:
             decision = "ALLOW"
-            model_decision = "SECURE"
             severity = "LOW"
-
-        # -------- Interpretation text --------
-        interpretation = (
-            "This Docker image deviates from normal Docker image patterns learned by the detection model. "
-            f"It has been deemed {model_decision} by the ML-based scanner."
-        )
 
         return {
             "image_name": image_name,
-            "image_tag": image_name.split(":")[-1] if ":" in image_name else None,
+            "secure_prediction": secure_prediction,
             "predicted_vulnerabilities": vulnerability_count,
-            "critical_count": 0,  # You can fill if your regression model outputs
-            "high_count": 0,
-            "medium_count": 0,
-            "low_count": 0,
-            "decision": decision,
+            "anomaly_detected": anomaly_result == -1,
             "severity": severity,
-            "supervised_explanation": supervised_explanation,  # list of strings
-            "classification_explanation": classification_explanation,
-            "unsupervised_explanation": unsupervised_explanation,
-            "interpretation": interpretation,
-            "model_decision": model_decision,
+            "decision": decision,
+            "supervised_explanation": supervised_explanation,
+            "unsupervised_explanation": unsupervised_explanation
         }
 
     except Exception as e:

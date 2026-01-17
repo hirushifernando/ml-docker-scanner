@@ -9,50 +9,37 @@ def generate_human_readable_unsupervised_text(
     feature_names,
     top_k=5
 ):
+    """
+    Generate a human-readable explanation for anomaly detection (unsupervised).
+    Returns top_k features that most influenced the anomaly decision.
+    """
     shap_df = pd.DataFrame({
         "feature": feature_names,
         "value": row.values,
         "shap_value": shap_row
     })
 
+    # Sort features by absolute SHAP value
     shap_df["abs_shap"] = shap_df["shap_value"].abs()
     shap_df = shap_df.sort_values("abs_shap", ascending=False)
 
-    anomaly_reasons = []
-    normal_reasons = []
-
+    explanations = []
     for _, r in shap_df.head(top_k).iterrows():
         feature = r["feature"]
         value = r["value"]
         shap_val = r["shap_value"]
 
         if shap_val < 0:
-            anomaly_reasons.append(
-                f"{feature} = {value} strongly contributed to this image being ANOMALOUS"
-            )
+            explanations.append(f"{feature} = {value} strongly contributed to this image being ANOMALOUS")
         else:
-            normal_reasons.append(
-                f"{feature} = {value} reduced the anomaly risk"
-            )
+            explanations.append(f"{feature} = {value} reduced the anomaly risk")
 
-    output_text = f"""
-Docker Image Anomaly Analysis
+    interpretation = (
+        "This Docker image deviates from normal Docker image patterns "
+        "learned by the anomaly detection model."
+    )
 
-Final Model Decision:
-This Docker image is classified as: {anomaly_label.upper()}
-
-Primary reasons for anomaly detection:
-- """ + "\n- ".join(anomaly_reasons[:3]) + f"""
-
-Additional observations:
-- """ + "\n- ".join(normal_reasons[:2]) + f"""
-
-Interpretation:
-This Docker image deviates from normal Docker image patterns
-learned by the anomaly detection model.
-"""
-
-    return output_text.strip()
+    return "\n".join(explanations) + f"\n\nInterpretation:\n{interpretation}"
 
 
 def generate_human_readable_text(
@@ -60,54 +47,62 @@ def generate_human_readable_text(
     predicted_vuln,
     predicted_status,
     shap_reg_row,
-    shap_clf_row
+    shap_clf_row,
+    top_k=5
 ):
     """
-    Creates a human-readable explanation using SHAP values
-    for supervised (regression + classification) models.
+    Generate human-readable explanations for supervised models:
+    - Regression (vulnerability count)
+    - Classification (secure/insecure)
     """
 
-    critical = int(row['Critical Severity'])
-    high = int(row['High Severity'])
-    medium = int(row['Medium Severity'])
-    low = int(row['Low Severity'])
+    # Extract severity counts dynamically if present in row
+    critical = int(row.get("Critical_Severity", 0))
+    high = int(row.get("High_Severity", 0))
+    medium = int(row.get("Medium_Severity", 0))
+    low = int(row.get("Low_Severity", 0))
 
     status_text = "secure" if predicted_status == 1 else "insecure"
 
+    # Regression explanation
     reg_reasons = []
     for feature, shap_val, value in zip(row.index, shap_reg_row, row.values):
         if shap_val > 0:
-            reg_reasons.append(
-                f"{feature} = {value} increased vulnerability count"
-            )
+            reg_reasons.append(f"{feature} = {value} increased vulnerability count")
         elif shap_val < 0:
-            reg_reasons.append(
-                f"{feature} = {value} reduced vulnerability count"
-            )
+            reg_reasons.append(f"{feature} = {value} reduced vulnerability count")
+        else:
+            reg_reasons.append(f"{feature} = {value} no significant impact")
+    reg_explanation = "\n".join(reg_reasons[:top_k])
 
+    # Classification explanation
     clf_reasons = []
     for feature, shap_val, value in zip(row.index, shap_clf_row, row.values):
         if shap_val > 0:
-            clf_reasons.append(
-                f"{feature} = {value} increased insecurity risk"
-            )
+            clf_reasons.append(f"{feature} = {value} increased insecurity risk")
         elif shap_val < 0:
-            clf_reasons.append(
-                f"{feature} = {value} reduced insecurity risk"
-            )
+            clf_reasons.append(f"{feature} = {value} reduced insecurity risk")
+        else:
+            clf_reasons.append(f"{feature} = {value} no significant impact")
+    clf_explanation = "\n".join(clf_reasons[:top_k])
+
+    # Final interpretation
+    interpretation = (
+        "This Docker image deviates from normal patterns learned by the supervised "
+        "models. It has been deemed "
+        f"{status_text.upper()} by the ML-based scanner."
+    )
 
     return f"""
 Image has an estimated {predicted_vuln:.0f} vulnerabilities:
 {critical} critical, {high} high, {medium} medium, {low} low.
 
 Regression explanation:
-- {"; ".join(reg_reasons[:5])}
+{reg_explanation}
 
 Classification explanation:
-- {"; ".join(clf_reasons[:5])}
+{clf_explanation}
 
-Final status: {status_text.upper()}
+Interpretation:
+{interpretation}
 """.strip()
-
-
-
