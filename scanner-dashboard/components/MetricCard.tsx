@@ -12,7 +12,7 @@ interface MetricCardProps {
   icon: "docker" | "warning" | "shield" | "info";
   title: string;
   value: number;
-  timestamp: string;
+  timestamp?: string;
   color: "blue" | "red" | "green" | "yellow";
 }
 
@@ -55,9 +55,11 @@ export default function MetricCard({
       <div className="flex-1">
         <p className="text-gray-800 font-bold text-md">{title}</p>
         <p className={`font-bold text-2xl mt-3 ${valueColors[color]}`}>
-          {value}
+          {String(value).padStart(2, "0")}
         </p>
-        <p className="text-gray-400 text-sm mt-3">{timestamp}</p>
+        {timestamp && (
+          <p className="text-gray-400 text-sm mt-3">{timestamp}</p>
+        )}
       </div>
     </div>
   );

@@ -1,16 +1,14 @@
-// components/RecentScansTable.tsx
 import React from "react";
 
 interface Scan {
-  id: number;
   image_name: string;
-  registry: "Public" | "Private";
-  vulnerabilities: number;
-  size: string;               
-  status: "Secure" | "Anomalous";
-  scanned_at: string;
+  image_tag?: string;
+  registry_type: "public" | "private";
+  predicted_vulnerabilities: number;
+  scan_time: string;
+  model_decision: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY" | null;
+  decision: "ALLOW" | "DENY";
 }
-
 
 interface RecentScansTableProps {
   scans: Scan[];
@@ -27,69 +25,79 @@ export default function RecentScansTable({ scans }: RecentScansTableProps) {
         </button>
       </div>
       <div className="mt-2 h-px bg-gray-200" />
+
       {/* Table Rows */}
       <div className="space-y-3 mt-4">
-        {/* ================= COLUMN HEADERS ================= */}
+        {/* COLUMN HEADERS */}
         <div className="grid grid-cols-6 gap-4 items-center px-2 text-gray-700 text-sm font-medium divide-x divide-gray-300 text-center sticky top-0 bg-white z-10">
           <span className="pr-4">Image Name</span>
           <span className="px-4">Registry</span>
           <span className="px-4">Vulnerabilities</span>
-          <span className="px-4">Size</span>
           <span className="px-4">Scanned At</span>
-          <span className="pl-4">Status</span>
+          <span className="px-4">Status</span>
+          <span className="pl-4">Decision</span>
         </div>
 
-
-        {/* ================= ROWS ================= */}
+        {/* ROWS */}
         <div className="mt-2 max-h-53 overflow-y-auto space-y-3">
-          {scans.map((scan) => (
-          <div
-            key={scan.id}
-            className="grid grid-cols-6 gap-4 items-center bg-gray-200 rounded-lg p-3"
-          >
-            {/* Image Name */}
-            <div className="font-sm text-gray-500">
-              {scan.image_name}
-            </div>
+          {scans.map((scan, index) => (
+            <div
+              key={`${scan.image_name}-${scan.image_tag ?? "none"}-${scan.scan_time}-${index}`} // UNIQUE key
+              className="grid grid-cols-6 gap-4 items-center bg-gray-100 rounded-lg p-3 text-sm text-center"
+            >
+              {/* Image Name */}
+              <div className="font-semibold text-gray-700">
+                {scan.image_name}{scan.image_tag ? `:${scan.image_tag}` : ""}
+              </div>
 
-            {/* Registry */}
-            <div className="text-gray-500 text-sm">
-              {scan.registry}
-            </div>
+              {/* Registry */}
+              <div className="text-gray-500 text-sm capitalize">
+                {scan.registry_type}
+              </div>
 
-            {/* Vulnerabilities */}
-            <div className="text-sm text-gray-500">
-              {scan.vulnerabilities}
-            </div>
+              {/* Vulnerabilities */}
+              <div className="font-semibold text-gray-700">
+                {scan.predicted_vulnerabilities ?? 0}
+              </div>
 
-            {/* Size */}
-            <div className="text-gray-500 text-sm">
-              {scan.size}
-            </div>
+              {/* Scanned Time */}
+              <div className="text-gray-500 text-sm">
+                {new Date(scan.scan_time).toLocaleString()}
+              </div>
 
-            {/* Scanned Time */}
-            <div className="text-gray-500 text-sm">
-              {new Date(scan.scanned_at).toLocaleString()}
-            </div>
+              {/* Status */}
+              <div className="flex justify-center">
+                <span
+                  className={`px-3 py-1 rounded-md text-sm font-semibold text-white ${
+                    scan.model_decision === "SECURE" ||
+                    scan.model_decision === "NORMAL"
+                      ? "bg-green-500"
+                      : "bg-red-500"
+                  }`}
+                >
+                  {scan.model_decision ?? "N/A"}
+                </span>
+              </div>
 
-            {/* Status */}
-            <div className="flex justify-center">
-              <span
-                className={`px-3 py-1 rounded-md text-sm font-semibold text-white ${
-                  scan.status === "Secure"
-                    ? "bg-green-500"
-                    : "bg-red-500"
+              {/* Decision */}
+              <div
+                className={`font-semibold ${
+                  scan.decision === "ALLOW"
+                    ? "text-green-600"
+                    : "text-red-600"
                 }`}
               >
-                {scan.status}
-              </span>
+                {scan.decision}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+          {scans.length === 0 && (
+            <div className="text-center text-gray-400 py-6">
+              No scan results available
+            </div>
+          )}
         </div>
-
       </div>
-
     </div>
   );
 }

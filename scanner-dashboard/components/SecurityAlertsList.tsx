@@ -47,7 +47,7 @@ export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) 
 
       {/* Alerts */}
       <div className="divide-y divide-gray-200 mt-4 max-h-60 overflow-y-auto">
-        {alerts.map((a) => {
+        {(alerts ?? []).map((a) => {
           const style = severityStyles[a.severity];
 
           return (
@@ -56,16 +56,10 @@ export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) 
               className="flex items-start gap-3 py-3"
             >
               {/* Left indicator with Icon + Vertical Line */}
-                <div className="flex flex-col items-center">
-                  {/* Alert Icon */}
-                  <AlertCircle
-                    size={18}
-                    className={style.text}
-                  />
-
-                  {/* Vertical Line */}
-                  <div className="mt-1 w-0.5 h-10 bg-black" />
-                </div>
+              <div className="flex flex-col items-center">
+                <AlertCircle size={18} className={style.text} />
+                <div className="mt-1 w-0.5 h-10 bg-black" />
+              </div>
 
               {/* Content */}
               <div className="flex-1">
@@ -93,6 +87,7 @@ export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) 
           );
         })}
       </div>
+
     </div>
   );
 }

@@ -5,22 +5,24 @@ import { Chart as ChartJS, ArcElement, Tooltip } from "chart.js";
 ChartJS.register(ArcElement, Tooltip);
 
 interface Registry {
-  type: "Public" | "Private";
+  registry_type: "public" | "private";
   secure: number;
   anomalous: number;
 }
+
 
 interface RegistryOverviewProps {
   registries: Registry[];
 }
 
 /* 🔒 Registry icons (internal mapping) */
-const registryIcons: Record<Registry["type"], string> = {
-  Public: "/public.png",
-  Private: "/private.png",
+const registryIcons: Record<"public" | "private", string> = {
+  public: "/public.png",
+  private: "/private.png",
 };
 
 export default function RegistryOverview({ registries }: RegistryOverviewProps) {
+
   return (
     <div className="bg-white shadow rounded-lg p-4">
       {/* ================= HEADER ================= */}
@@ -32,28 +34,32 @@ export default function RegistryOverview({ registries }: RegistryOverviewProps) 
       {/* ================= REGISTRIES ================= */}
       <div className="flex flex-col md:flex-row mt-6 relative">
         {registries.map((r, index) => {
+          const type = r.registry_type; // ✅ FROM DB
           const total = r.secure + r.anomalous;
+          const hasData = total > 0;
 
+          // 📊 Chart Data
           const chartData = {
-            labels: ["Secure", "Anomalous"],
+            labels: hasData ? ["Secure", "Anomalous"] : ["No Data"],
             datasets: [
               {
-                data: [r.secure, r.anomalous],
-                backgroundColor: ["#00c72b", "#d70202"],
+                data: hasData ? [r.secure, r.anomalous] : [1],
+                backgroundColor: hasData
+                  ? ["#00c72b", "#d70202"]
+                  : ["#d9d9d9"], // gray
                 borderWidth: 2,
                 borderColor: "#ffffff",
-                hoverOffset: 8,
               },
             ],
           };
 
           return (
-            <React.Fragment key={r.type}>
+            <React.Fragment key={index}>
               {/* ================= SINGLE REGISTRY ================= */}
               <div className="flex-1 flex flex-col items-center">
                 {/* Title */}
                 <p className="text-gray-800 font-semibold mb-2">
-                  {r.type} Registry
+                  {type.charAt(0).toUpperCase() + type.slice(1)} Registry
                 </p>
 
                 {/* Donut Chart */}
@@ -61,17 +67,20 @@ export default function RegistryOverview({ registries }: RegistryOverviewProps) 
                   <Pie
                     data={chartData}
                     options={{
-                      cutout: "65%", 
-                      plugins: { legend: { display: false } },
+                      cutout: "65%",
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: hasData },
+                      },
                     }}
                   />
 
                   {/* Center Image */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <img
-                      src={registryIcons[r.type]}
-                      alt={`${r.type} registry`}
-                      className="w-13 h-10"
+                      src={registryIcons[type]}
+                      alt={`${type} registry`}
+                      className="w-12 h-10 opacity-80"
                     />
                   </div>
                 </div>
@@ -96,6 +105,7 @@ export default function RegistryOverview({ registries }: RegistryOverviewProps) 
                 <p className="text-gray-600 text-sm mt-4">
                   Total Images: {total}
                 </p>
+
               </div>
 
               {/* ================= VERTICAL DIVIDER ================= */}
