@@ -71,8 +71,8 @@ export default function RecentScansTable({ scans }: RecentScansTableProps) {
                   className={`px-3 py-1 rounded-md text-sm font-semibold text-white ${
                     scan.model_decision === "SECURE" ||
                     scan.model_decision === "NORMAL"
-                      ? "bg-green-500"
-                      : "bg-red-500"
+                      ? "bg-green-600"
+                      : "bg-red-600"
                   }`}
                 >
                   {scan.model_decision ?? "N/A"}

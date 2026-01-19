@@ -77,7 +77,7 @@ export default function OverviewDashboard() {
         <MetricCard
           icon="info"
           title="Total Unseen Critical Alerts"
-          value={overview.critical_alerts}
+          value={overview.unseen_alerts}
           timestamp={overview.last_scan_time}
           color="yellow"
         />

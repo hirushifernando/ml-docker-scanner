@@ -51,3 +51,7 @@ ecr-batch-delete-image
 *.log
 
 tiny-app/
+anomaly-image/
+docker_test_images/
+not-secure-image/
+secure-image/

@@ -9,9 +9,11 @@ const pool = mysql.createPool({
     database:"scanner_db"
 });
 
+
 export async function GET() {
+  let connection: mysql.PoolConnection | null = null;
   try {
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
 
     /* ===============================
        1. TOTAL SCANS
@@ -33,13 +35,6 @@ export async function GET() {
       `SELECT COUNT(*) AS vulnerable_count 
        FROM scan_results 
        WHERE model_decision = 'NOT SECURE'`
-    );
-
-    /* ===============================
-       3. CRITICAL ALERTS
-    =============================== */
-    const [[critical]]: any = await connection.query(
-      `SELECT SUM(critical_count) AS critical_alerts FROM scan_results`
     );
 
     /* ===============================
@@ -94,24 +89,61 @@ export async function GET() {
     connection.release();
 
     /* ===============================
+       7. SECURITY ALERTS (CORRECT)
+    =============================== */
+    const [alerts]: any = await connection.query(
+      `SELECT
+        id,
+        severity,
+        title,
+        timestamp,
+        seen
+      FROM security_alerts
+      ORDER BY timestamp DESC
+      LIMIT 10`
+    );
+
+    /* ===============================
+       8. UNSEEN ALERT COUNT (BELL)
+    =============================== */
+    const [[unseenCount]]: any = await connection.query(
+      `SELECT COUNT(*) AS unseen
+       FROM security_alerts
+       WHERE seen = FALSE`
+    );
+
+    /* ===============================
        FINAL DASHBOARD RESPONSE
     =============================== */
     return NextResponse.json({
       total_scanned: total.total_scanned,
       secure_count: secure.secure_count,
       vulnerable_count: notSecure.vulnerable_count,
-      critical_alerts: critical.critical_alerts || 0,
       last_scan_time: lastScan.last_scan_time,
       recent_scans: recentScans,
       vulnerability_breakdown: breakdown,
       registries,
+      // 🔔 ALERT SYSTEM
+      alerts: alerts.map((a: any) => ({
+        id: a.id,
+        severity: a.severity,
+        title: a.title,
+        timestamp: new Date(a.timestamp).toLocaleString(),
+        isNew: !a.seen,
+      })),
+      unseen_alerts: unseenCount.unseen,
     });
+
   } catch (error) {
     console.error("Dashboard overview error:", error);
     return NextResponse.json(
       { error: "Failed to load dashboard data" },
       { status: 500 }
     );
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 }
 
