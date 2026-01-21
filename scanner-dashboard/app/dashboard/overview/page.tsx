@@ -7,41 +7,61 @@ import VulnerabilityDonut from "@/components/VulnerabilityDonut";
 import RegistryOverview from "@/components/RegistryOverview";
 import SecurityAlertsList from "@/components/SecurityAlertsList";
 import { getOverviewData } from "../services/overviewService";
+import { useAlertContext } from "@/app/layout"; 
 
 export default function OverviewDashboard() {
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-   useEffect(() => {
-    getOverviewData()
-      .then((data) => {
-        /* =====================================================
-           ✅ MAP BACKEND → UI SHAPE (IMPORTANT FIX)
-        ===================================================== */
-        const mappedRecentScans = data.recent_scans.map((s: any) => ({
-          image_name: s.image || s.image_name,
-          image_tag: s.tag || s.image_tag,
-          registry_type: s.registry_type,    
-          predicted_vulnerabilities: s.vulnerabilities ?? 0,
-          scan_time: s.scanned_at || s.scan_time,
-          model_decision: s.model_decision,              
-          decision: s.decision 
-        }));
+  const { unseenAlerts, setUnseenAlerts } = useAlertContext();
 
-        setOverview({
-          ...data,
-          recent_scans: mappedRecentScans, // 🔥 overwrite with mapped data
-        });
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+  /* ================== FETCH DASHBOARD DATA ================== */
+  const fetchOverview = async () => {
+    try {
+      const data = await getOverviewData();
+
+      const mappedRecentScans = data.recent_scans.map((s: any) => ({
+        image_name: s.image || s.image_name,
+        image_tag: s.tag || s.image_tag,
+        registry_type: s.registry_type,    
+        predicted_vulnerabilities: s.vulnerabilities ?? 0,
+        scan_time: s.scanned_at || s.scan_time,
+        model_decision: s.model_decision,              
+        decision: s.decision 
+      }));
+
+      setOverview({
+        ...data,
+        recent_scans: mappedRecentScans,
+      });
+
+      setUnseenAlerts(data.unseen_alerts || 0);
+    } catch (err) {
+      console.error("Failed to fetch overview:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOverview();
   }, []);
 
-  if (loading)
-    return <p className="p-6 text-gray-500">Loading dashboard...</p>;
+  if (loading) return <p className="p-6 text-gray-500">Loading dashboard...</p>;
+  if (!overview) return <p className="p-6 text-red-500">Failed to load dashboard</p>;
 
-  if (!overview)
-    return <p className="p-6 text-red-500">Failed to load dashboard</p>;
+  /* ================== HANDLER WHEN ALERT IS VIEWED ================== */
+  const handleAlertViewed = (alertId: number) => {
+    // Optimistic UI update
+    setUnseenAlerts(Math.max(0, unseenAlerts - 1));
+
+    fetch("/api/security_alerts/mark_seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alertId })
+    }).catch(console.error);
+  };
+
 
   return (
     <div className="p-6 space-y-6">
@@ -51,6 +71,7 @@ export default function OverviewDashboard() {
           Dashboard
         </h1>
       </div>
+
       {/* Top Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <MetricCard
@@ -77,7 +98,7 @@ export default function OverviewDashboard() {
         <MetricCard
           icon="info"
           title="Total Unseen Critical Alerts"
-          value={overview.unseen_alerts}
+          value={unseenAlerts} // reactive count
           timestamp={overview.last_scan_time}
           color="yellow"
         />
@@ -85,23 +106,21 @@ export default function OverviewDashboard() {
 
       {/* Middle Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 2/3 width */}
         <div className="md:col-span-2">
           <RecentScansTable scans={overview.recent_scans} />
         </div>
-
-
-        {/* 1/3 width */}
         <div className="md:col-span-1">
           <VulnerabilityDonut data={overview.vulnerability_breakdown} />
         </div>
       </div>
 
-
       {/* Bottom Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <RegistryOverview registries={overview.registries} />
-        <SecurityAlertsList alerts={overview.alerts} />
+        <SecurityAlertsList
+          alerts={overview.alerts}
+          onAlertViewed={handleAlertViewed} // pass handler to child
+        />
       </div>
     </div>
   );

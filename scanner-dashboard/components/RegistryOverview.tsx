@@ -6,8 +6,8 @@ ChartJS.register(ArcElement, Tooltip);
 
 interface Registry {
   registry_type: "public" | "private";
-  secure: number;
-  anomalous: number;
+  secure: number | string;   
+  anomalous: number | string;
 }
 
 
@@ -35,7 +35,9 @@ export default function RegistryOverview({ registries }: RegistryOverviewProps) 
       <div className="flex flex-col md:flex-row mt-6 relative">
         {registries.map((r, index) => {
           const type = r.registry_type; // ✅ FROM DB
-          const total = r.secure + r.anomalous;
+          const secureCount = Number(r.secure);
+          const anomalousCount = Number(r.anomalous);
+          const total = secureCount + anomalousCount;
           const hasData = total > 0;
 
           // 📊 Chart Data
@@ -90,13 +92,13 @@ export default function RegistryOverview({ registries }: RegistryOverviewProps) 
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-green-500" />
                     <span className="text-sm text-gray-700">
-                      {r.secure} Secure
+                      {secureCount} Secure
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-red-500" />
                     <span className="text-sm text-gray-700">
-                      {r.anomalous} Anomalous
+                      {anomalousCount} Anomalous
                     </span>
                   </div>
                 </div>

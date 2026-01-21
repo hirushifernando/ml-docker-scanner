@@ -4,9 +4,30 @@ import Link from "next/link";
 import Image from "next/image";
 import { Bell, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useAlertContext } from "@/app/layout";
+import { getOverviewData } from "../app/dashboard/services/overviewService";
 
 export default function Navbar() {
   const pathname = usePathname();
+ const { unseenAlerts, setUnseenAlerts } = useAlertContext();
+
+  // Fetch unseen alerts count
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const data = await getOverviewData();
+        setUnseenAlerts(data.unseen_alerts || 0);
+      } catch (err) {
+        console.error("Failed to fetch unseen alerts", err);
+      }
+    };
+
+    fetchAlerts();
+    // Optional: refresh every 30 seconds
+    const interval = setInterval(fetchAlerts, 30000);
+    return () => clearInterval(interval);
+  }, [setUnseenAlerts]);
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard/overview" },
@@ -56,10 +77,14 @@ export default function Navbar() {
 
         {/* ================= RIGHT: PROFILE ================= */}
         <div className="flex items-center gap-5">
-          {/* Notification */}
+           {/* Notification Bell */}
           <button className="relative hover:text-blue-400 transition">
             <Bell size={23} />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+            {unseenAlerts > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white rounded-full text-xs flex items-center justify-center font-bold">
+                {unseenAlerts}
+              </span>
+            )}
           </button>
 
           {/* Profile */}

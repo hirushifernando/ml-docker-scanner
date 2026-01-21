@@ -38,14 +38,14 @@ export async function GET() {
     );
 
     /* ===============================
-       4. LAST SCAN TIME
+       3. LAST SCAN TIME
     =============================== */
     const [[lastScan]]: any = await connection.query(
       `SELECT MAX(scan_time) AS last_scan_time FROM scan_results`
     );
 
     /* ===============================
-       5. RECENT SCANS (TABLE)
+       4. RECENT SCANS (TABLE)
     =============================== */
     const [recentScans]: any = await connection.query(
       `SELECT
@@ -63,7 +63,7 @@ export async function GET() {
 
 
     /* ===============================
-       6. VULNERABILITY BREAKDOWN
+       5. VULNERABILITY BREAKDOWN
     =============================== */
     const [[breakdown]]: any = await connection.query(
       `SELECT 
@@ -75,7 +75,7 @@ export async function GET() {
     );
 
     /* ===============================
-       7. REGISTRY STATS
+       6. REGISTRY STATS
     =============================== */
     const [registries]: any = await connection.query(
       `SELECT 
@@ -89,27 +89,23 @@ export async function GET() {
     connection.release();
 
     /* ===============================
-       7. SECURITY ALERTS (CORRECT)
+       7. FETCH SECURITY ALERTS
+       (ALERTS ARE CREATED DURING SCAN)
     =============================== */
     const [alerts]: any = await connection.query(
-      `SELECT
-        id,
-        severity,
-        title,
-        timestamp,
-        seen
-      FROM security_alerts
-      ORDER BY timestamp DESC
-      LIMIT 10`
+      `SELECT id, severity, title, timestamp, seen
+       FROM security_alerts
+       ORDER BY timestamp DESC
+       LIMIT 10`
     );
 
     /* ===============================
-       8. UNSEEN ALERT COUNT (BELL)
+       8. FETCH UNSEEN ALERT COUNT
     =============================== */
     const [[unseenCount]]: any = await connection.query(
       `SELECT COUNT(*) AS unseen
        FROM security_alerts
-       WHERE seen = FALSE`
+       WHERE seen = 0`
     );
 
     /* ===============================
@@ -134,10 +130,10 @@ export async function GET() {
       unseen_alerts: unseenCount.unseen,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Dashboard overview error:", error);
     return NextResponse.json(
-      { error: "Failed to load dashboard data" },
+      { error: "Failed to load dashboard data", details: error.message },
       { status: 500 }
     );
   } finally {

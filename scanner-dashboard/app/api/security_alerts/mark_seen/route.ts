@@ -1,4 +1,3 @@
-// scanner-dashboard/app/api/security_alerts/mark_seen/route.ts
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
@@ -10,21 +9,35 @@ const pool = mysql.createPool({
 });
 
 export async function POST(req: Request) {
+  let connection: mysql.PoolConnection | null = null;
+
   try {
     const { alertId } = await req.json();
 
-    if (!alertId) return NextResponse.json({ error: "Missing alertId" }, { status: 400 });
+    if (!alertId) {
+      return NextResponse.json(
+        { error: "Missing alertId" },
+        { status: 400 }
+      );
+    }
 
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
+
     await connection.query(
-      `UPDATE security_alerts SET seen = TRUE WHERE id = ?`,
+      `UPDATE security_alerts SET seen = 1 WHERE id = ?`,
       [alertId]
     );
-    connection.release();
 
     return NextResponse.json({ success: true });
+
   } catch (error) {
     console.error("Mark seen error:", error);
-    return NextResponse.json({ error: "Failed to mark alert as seen" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to mark alert as seen" },
+      { status: 500 }
+    );
+  } finally {
+    if (connection) connection.release();
   }
 }
+

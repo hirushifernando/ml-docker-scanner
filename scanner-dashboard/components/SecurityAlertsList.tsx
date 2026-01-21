@@ -1,6 +1,9 @@
 // components/SecurityAlertsList.tsx
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { Eye, Trash2, AlertCircle, X } from "lucide-react";
+import { useAlertContext } from "@/app/layout";
 
 interface Alert {
   id: number;
@@ -12,11 +15,22 @@ interface Alert {
 
 interface SecurityAlertsListProps {
   alerts: Alert[];
+  onAlertViewed?: (alertId: number) => void;
 }
 
-export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) {
-  const [seenAlerts, setSeenAlerts] = useState<number[]>([]);
+export default function SecurityAlertsList({ alerts, onAlertViewed }: SecurityAlertsListProps) {
   const [popupAlert, setPopupAlert] = useState<Alert | null>(null);
+
+  // ✅ Local reactive alert state
+  const [localAlerts, setLocalAlerts] = useState<Alert[]>(alerts ?? []);
+
+  // Update localAlerts if props change
+  useEffect(() => {
+    setLocalAlerts(alerts ?? []);
+  }, [alerts]);
+
+  // ✅ global unseen alert state
+  const { unseenAlerts, setUnseenAlerts } = useAlertContext();
 
   const severityStyles = {
     Critical: {
@@ -42,20 +56,30 @@ export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) 
   };
 
   const handleViewAlert = async (alert: Alert) => {
-    setPopupAlert(alert); // open popup
+    setPopupAlert(alert);
 
-    // mark alert as seen in backend
-    if (!alert.isNew) return; // already seen, no need to mark again
+    if (!alert.isNew) return;
 
     try {
+      // Call backend to mark as seen
       await fetch("/api/security_alerts/mark_seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alertId: alert.id }),
       });
 
-      // update local state to remove blue background immediately
-      setSeenAlerts([...seenAlerts, alert.id]);
+      // Update global unseen count
+      setUnseenAlerts(Math.max(unseenAlerts - 1, 0));
+
+      // Update local alert state so background changes immediately
+      setLocalAlerts((prev) =>
+        prev.map((a) =>
+          a.id === alert.id ? { ...a, isNew: false } : a
+        )
+      );
+
+      // Call parent handler if provided
+      if (onAlertViewed) onAlertViewed(alert.id);
     } catch (err) {
       console.error("Failed to mark alert as seen", err);
     }
@@ -75,49 +99,48 @@ export default function SecurityAlertsList({ alerts }: SecurityAlertsListProps) 
 
       {/* Alerts */}
       <div className="divide-y divide-gray-200 mt-4 max-h-60 overflow-y-auto">
-        {(alerts ?? []).map((a, index) => {
-          const style = severityStyles[a.severity];
-          const uniqueKey = `${a.id}-${index}`;
-          const isSeen = seenAlerts.includes(a.id);
-          const isNew = a.isNew && !isSeen;
+        {(localAlerts ?? [])
+          // Only show Critical & High alerts in UI
+          .filter((a) => a.severity === "Critical" || a.severity === "High")
+          .map((a) => {
+            const style = severityStyles[a.severity];
+            return (
+              <div
+                key={a.id}
+                className={`flex items-start gap-3 py-3 px-2 rounded-md transition ${
+                  a.isNew ? "bg-blue-100" : "bg-white"
+                }`}
+              >
+                {/* Left indicator */}
+                <div className="flex flex-col items-center">
+                  <AlertCircle size={18} className={style.text} />
+                  <div className="mt-1 w-0.5 h-10 bg-black" />
+                </div>
 
-          return (
-            <div
-              key={uniqueKey}
-              className={`flex items-start gap-3 py-3 px-2 rounded-md transition ${
-                isNew ? "bg-blue-100" : ""
-              }`}
-            >
-              {/* Left indicator */}
-              <div className="flex flex-col items-center">
-                <AlertCircle size={18} className={style.text} />
-                <div className="mt-1 w-0.5 h-10 bg-black" />
-              </div>
+                {/* Content */}
+                <div className="flex-1">
+                  <span className={`text-md font-semibold ${style.text}`}>
+                    [ {a.severity} ]
+                  </span>
+                  <p className="text-md font-semibold text-gray-600 mt-0.5">{a.title}</p>
+                  <p className="text-sm text-gray-500">{a.timestamp}</p>
+                </div>
 
-              {/* Content */}
-              <div className="flex-1">
-                <span className={`text-md font-semibold ${style.text}`}>
-                  [ {a.severity} ]
-                </span>
-                <p className="text-md font-semibold text-gray-600 mt-0.5">{a.title}</p>
-                <p className="text-sm text-gray-500">{a.timestamp}</p>
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewAlert(a)}
+                    className="p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200 transition">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleViewAlert(a)}
-                  className="p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
-                >
-                  <Eye size={18} />
-                </button>
-                <button className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200 transition">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {/* Popup */}
