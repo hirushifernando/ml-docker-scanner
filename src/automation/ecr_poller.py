@@ -12,6 +12,7 @@ from mysql.connector import Error
 
 from src.api.predict import scan_image
 from src.api.docker_feature_extractor import extract_features_from_image
+from src.api.deploy import deploy_to_ec2
 
 # ---------------- CONFIG ----------------
 REGION = "ap-south-1"
@@ -26,6 +27,11 @@ DOCKER_HUB_TAGS_URL = f"https://hub.docker.com/v2/repositories/{DOCKER_HUB_REPO}
 POLL_INTERVAL = 60  # seconds
 SCANNED_FILE = "scanned_images.json"
 DASHBOARD_API_URL = None  # optional
+
+EC2_HOST = "13.201.137.7"
+EC2_USER = "ec2-user"
+EC2_KEY_PATH = "/home/hirushi/.ssh/docker-scanner-key.pem"
+DOCKER_RUN_OPTIONS = "-d -p 8080:80"
 
 # ---------------- INIT ----------------
 ecr = boto3.client("ecr", region_name=REGION)
@@ -98,6 +104,18 @@ def run_scan(image_name: str, source: str):
         print(f"{k}: {v}")
 
     save_result_to_db(image_name, source, db_result)
+
+    # ---------------- DEPLOY IF SECURE ----------------
+    if db_result.get("decision") == "ALLOW":
+        print(f"✅ Image {image_name} is secure. Deploying to EC2...")
+        deploy_to_ec2(
+            image_name=image_name,
+            container_name=f"container_{db_result['image_tag']}",
+            run_options=DOCKER_RUN_OPTIONS
+        )
+    else:
+        print(f"❌ Image {image_name} is insecure. Deployment blocked.")
+
     return db_result
 
 
@@ -139,8 +157,6 @@ def get_public_images():
     try:
         response = requests.get(DOCKER_HUB_TAGS_URL, timeout=15)
         data = response.json()
-
-        print("🐳 Docker Hub raw response:", data)
 
         return [
             f"{DOCKER_HUB_REPO}:{tag['name']}"
