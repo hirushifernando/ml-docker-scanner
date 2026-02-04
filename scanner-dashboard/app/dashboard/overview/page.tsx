@@ -21,6 +21,19 @@ export default function OverviewDashboard() {
   const fetchOverview = async () => {
     try {
       const data = await getOverviewData();
+      const deploymentTrend = (data.deployments || []).reduce((acc: any, item: any) => {
+        const date = new Date(item.deployed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const existing = acc.find((d: any) => d.date === date);
+        if (existing) {
+          existing.deployed += 1;
+        } else {
+          acc.push({ date, deployed: 1 });
+        }
+        return acc;
+      }, []);
+
+      console.log("Deployments from API:", data.deployments);
+      console.log("Aggregated trend:", deploymentTrend);
 
       const mappedRecentScans = data.recent_scans.map((s: any) => ({
         image_name: s.image || s.image_name,
@@ -39,6 +52,7 @@ export default function OverviewDashboard() {
       setOverview({
         ...data,
         recent_scans: mappedRecentScans,
+        deployment_trend: deploymentTrend.length > 0 ? deploymentTrend : [{ date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }), deployed: 0 }],
       });
 
       setUnseenAlerts(data.unseen_alerts || 0);
@@ -141,10 +155,7 @@ export default function OverviewDashboard() {
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <DeploymentTrendChart
-            data={overview.deployment_trend || [
-              { date: "Jan 1", deployed: 0 },
-              { date: "Jan 2", deployed: 0 },
-            ]}
+            data={overview.deployment_trend || []}
           />
         </div>
         <div className="lg:col-span-1 h-full">

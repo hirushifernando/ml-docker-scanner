@@ -8,10 +8,15 @@ EC2_HOST = "13.201.137.7"               # Replace with your EC2 public IP
 EC2_USER = "ec2-user"                   # Usually "ec2-user" for Amazon Linux
 EC2_KEY_PATH = "/home/hirushi/.ssh/docker-scanner-key.pem"  # Path to your .pem
 
-# Example: secure image
-IMAGE_NAME = "nginx:latest"             # Replace with your secure image
-CONTAINER_NAME = "my_secure_app"
-DOCKER_RUN_OPTIONS = "-d -p 8080:80"  # Adjust ports to match your app
+ssh_cmd = [
+    "ssh",
+    "-o", "StrictHostKeyChecking=no",
+    "-i", EC2_KEY_PATH,
+    f"{EC2_USER}@{EC2_HOST}",
+    "echo Connected to EC2"
+]
+
+subprocess.run(ssh_cmd, check=True)
 
 # ECR config (only needed for private images)
 ECR_REGISTRY = "586098609652.dkr.ecr.ap-south-1.amazonaws.com"  # Replace with your ECR
@@ -30,7 +35,11 @@ def deploy_to_ec2(image_name, container_name, run_options):
     print(f"🔑 Connecting to EC2 {EC2_HOST}...")
     ssh.connect(hostname=EC2_HOST, username=EC2_USER, key_filename=EC2_KEY_PATH)
 
-    commands = []
+    commands = [
+        "docker --version || sudo yum install docker -y",
+        "sudo systemctl start docker",
+        "sudo systemctl enable docker",
+    ]
 
     # ----- AWS ECR login if image is private -----
     if ECR_REGISTRY in image_name:

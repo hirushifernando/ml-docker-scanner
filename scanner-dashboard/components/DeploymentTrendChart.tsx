@@ -5,11 +5,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ShieldCheckIcon } from "@heroicons/react/24/solid";
 
 interface TrendData {
-  date: string;
-  deployed: number;
-}
-
-interface TrendData {
   date: string;      // X-axis (Date)
   deployed: number; // Y-axis (Deployment count)
 }
@@ -18,9 +13,7 @@ interface DeploymentTrendChartProps {
   data: TrendData[];
 }
 
-export default function DeploymentTrendChart({
-  data,
-}: DeploymentTrendChartProps) {
+export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-bold text-gray-900">Deployment Status</h2>
@@ -32,17 +25,14 @@ export default function DeploymentTrendChart({
       </div>
 
       <ResponsiveContainer width="100%" height={250}>
-        <LineChart
-          data={data}
-          margin={{ top: 10, right: 20, bottom: 10, left: 10 }}
-        >
+         <LineChart data={data.length ? data : [{ date: "No Data", deployed: 0 }]} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ddddde" />
 
           {/* Horizontal axis → Date */}
           <XAxis
             dataKey="date"
             tick={{ fill: "#707070", fontSize: 15 }}
-            dy={15} 
+            dy={10} 
           />
 
           {/* Vertical axis → Deployment Count */}
@@ -57,6 +47,7 @@ export default function DeploymentTrendChart({
             }}
             tick={{ fill: "#707070" }}
             allowDecimals={false}
+            domain={[0, 'auto']}
           />
 
           <Tooltip

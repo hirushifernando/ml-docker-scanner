@@ -131,16 +131,20 @@ def run_scan(image_name: str, source: str):
     # ---------------- DEPLOY IF SECURE ----------------
     if db_result["final_decision"] == "ALLOW":
         print(f"✅ Image {image_name} is SAFE. Deploying to EC2...")
+
+        safe_name = image_name.replace("/", "_").replace(":", "_")
+        container_name = f"scanner_{safe_name}"
+
         deploy_to_ec2(
             image_name=image_name,
-            container_name=f"container_{db_result['image_tag']}",
+            container_name=container_name,
             run_options=DOCKER_RUN_OPTIONS
         )
+
     else:
         print(f"❌ Image {image_name} is NOT SAFE. Deployment blocked.")
 
     return db_result
-
 
 
 # ---------------- ECR FUNCTIONS ----------------
