@@ -1,8 +1,8 @@
 export async function getScanResults() {
   try {
-    const res = await fetch("http://localhost:8000/api/scans", {
-      cache: "no-store",
-    });
+    // Use relative path (no localhost)
+    const res = await fetch("/api/scan", { cache: "no-store" });
+
 
     if (!res.ok) {
       throw new Error("Failed to fetch scan results");
@@ -14,4 +14,5 @@ export async function getScanResults() {
     return [];
   }
 }
+
 

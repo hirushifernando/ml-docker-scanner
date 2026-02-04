@@ -24,7 +24,7 @@ const registryIcons: Record<"public" | "private", string> = {
 export default function RegistryOverview({ registries }: RegistryOverviewProps) {
 
   return (
-    <div className="bg-white shadow rounded-lg p-4">
+    <div className="bg-white shadow rounded-lg p-6">
       {/* ================= HEADER ================= */}
       <h3 className="text-lg font-bold text-gray-900">Registry Overview</h3>
 

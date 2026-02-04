@@ -3,8 +3,8 @@ interface InterpretationBoxProps {
     image_name: string;
     image_tag?: string;
     registry_type?: "public" | "private";
-    vulnerabilities?: number;
-    model_decision?: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
+    predicted_vulnerabilities?: number;
+    final_result?: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
     interpretation?: string; // DB value
   };
 }
@@ -14,8 +14,8 @@ export default function InterpretationBox({ scan }: InterpretationBoxProps) {
 
   const imageFullName = `${scan.image_name}${scan.image_tag ? `:${scan.image_tag}` : ""}`;
   const registryLabel = scan.registry_type === "public" ? "public registry" : "private registry";
-  const vulnerabilitiesCount = scan.vulnerabilities ?? 0;
-  const status = scan.model_decision ?? "UNKNOWN";
+  const vulnerabilitiesCount = scan.predicted_vulnerabilities ?? 0;
+  const status = scan.final_result ?? "UNKNOWN";
 
   // Use DB interpretation if exists, else fallback
   let interpretationText =

@@ -7,8 +7,8 @@ interface ScanSummaryCardProps {
     registry_type: "public" | "private";
     predicted_vulnerabilities: number;
     scan_time: string;
-    decision: "ALLOW" | "DENY";
-    model_decision: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
+    final_decision?: "ALLOW" | "DENY";
+    final_result: "SAFE" | "NOT_SAFE" | null; // changed
     critical_count?: number;
     high_count?: number;
     medium_count?: number;
@@ -20,8 +20,9 @@ interface ScanSummaryCardProps {
 export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
   if (!scan) return null;
 
-  const isSecure =
-  scan.model_decision === "SECURE" || scan.model_decision === "NORMAL";
+
+  const isSecure = scan.final_result === "SAFE";
+
 
 
   return (
@@ -73,7 +74,7 @@ export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
                 : "bg-red-200 text-red-700"
             }`}
           >
-            Status:  {scan.model_decision}
+            Status: {scan.final_result ?? "UNKNOWN"}
           </div>
 
           {/* Shield Image */}
@@ -85,7 +86,7 @@ export default function ScanSummaryCard({ scan }: ScanSummaryCardProps) {
         </div>
 
         {/* ACTION BUTTON */}
-        {scan.decision === "ALLOW" ? (
+        {scan.final_decision === "ALLOW" ? (
           <button className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold">
             Allowed for Deployment
           </button>

@@ -29,7 +29,7 @@ export default function ScanTable({ scans }: ScanTableProps) {
               <td className="px-4 py-2">{scan.registry_type}</td>
               <td className="px-4 py-2">{scan.vulnerabilities}</td>
               <td className="px-4 py-2">{scan.severity}</td>
-              <td className="px-4 py-2">{scan.decision}</td>
+              <td className="px-4 py-2">{scan.final_decision}</td>
               <td className="px-4 py-2">{new Date(scan.scan_time).toLocaleString()}</td>
             </tr>
           ))}

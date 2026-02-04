@@ -86,7 +86,7 @@ export default function SecurityAlertsList({ alerts, onAlertViewed }: SecurityAl
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg shadow p-4">
+    <div className="bg-gray-50 rounded-lg shadow p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-900">Security Alerts</h3>
@@ -98,7 +98,7 @@ export default function SecurityAlertsList({ alerts, onAlertViewed }: SecurityAl
       <div className="mt-2 h-px bg-gray-200" />
 
       {/* Alerts */}
-      <div className="divide-y divide-gray-200 mt-4 max-h-60 overflow-y-auto">
+      <div className="divide-y divide-gray-200 mt-4 max-h-70 overflow-y-auto">
         {(localAlerts ?? [])
           // Only show Critical & High alerts in UI
           .filter((a) => a.severity === "Critical" || a.severity === "High")

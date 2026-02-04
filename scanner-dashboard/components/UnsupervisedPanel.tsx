@@ -1,7 +1,8 @@
 interface UnsupervisedPanelProps {
   scan: {
     unsupervised_explanation?: string | string[];
-    model_decision?: "NORMAL" | "ANOMALY";
+    anomaly_result?: "NORMAL" | "ANOMALY";
+    anomaly_decision?: "ALLOW" | "DENY";
   };
 }
 
@@ -26,7 +27,7 @@ export default function UnsupervisedPanel({ scan }: UnsupervisedPanelProps) {
       .map(line => line.trim())
       .filter(Boolean);
 
-  const isNormal = scan.model_decision === "NORMAL";
+  const isNormal = scan.anomaly_result === "NORMAL";
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 space-y-6 flex flex-col h-96">

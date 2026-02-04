@@ -30,12 +30,16 @@ export async function GET() {
       high_count: row.high_count,
       medium_count: row.medium_count,
       low_count: row.low_count,
-      decision: row.decision,
+      supervised_decision: row.supervised_decision,
+      supervised_result: row.supervised_result,
+      anomaly_decision: row.anomaly_decision,
+      anomaly_result: row.anomaly_result,
+      final_decision: row.final_decision,
+      final_result: row.final_result,
       supervised_explanation: row.supervised_explanation,
       classification_explanation: row.classification_explanation,
       unsupervised_explanation: row.unsupervised_explanation,
       interpretation: row.interpretation,
-      model_decision: row.model_decision,
       ml_timestamp: row.ml_timestamp,
       scan_time: row.scan_time
   }));

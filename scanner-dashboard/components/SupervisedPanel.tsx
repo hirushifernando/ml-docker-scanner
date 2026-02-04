@@ -4,7 +4,8 @@ interface SupervisedPanelProps {
   scan: {
     supervised_explanation?: string | string[];
     classification_explanation?: string | string[];
-    model_decision?: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY";
+    supervised_result?: "SECURE" | "NOT_SECURE";
+    supervised_decision?: "ALLOW" | "DENY";
   };
 }
 
@@ -56,7 +57,7 @@ export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
 
 
   const isSecure =
-  scan.model_decision === "SECURE" || scan.model_decision === "NORMAL";
+  scan.supervised_result === "SECURE" || scan.supervised_result === "NOT_SECURE";
 
 
   return (
@@ -113,7 +114,7 @@ export default function SupervisedPanel({ scan }: SupervisedPanelProps) {
             className={`px-6 py-3 rounded-lg font-semibold text-md text-white
             bg-blue-800`}
           >
-            Final Status: {scan.model_decision ?? "UNKNOWN"}
+            Final Status: {scan.supervised_result ?? "UNKNOWN"}
           </span>
         </div>
       </div>

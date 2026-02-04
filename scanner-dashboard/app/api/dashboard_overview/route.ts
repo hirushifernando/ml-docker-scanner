@@ -28,13 +28,13 @@ export async function GET() {
     const [[secure]]: any = await connection.query(
       `SELECT COUNT(*) AS secure_count 
        FROM scan_results 
-       WHERE model_decision = 'SECURE'`
+       WHERE final_result = 'SAFE'`
     );
 
     const [[notSecure]]: any = await connection.query(
       `SELECT COUNT(*) AS vulnerable_count 
        FROM scan_results 
-       WHERE model_decision = 'NOT SECURE'`
+       WHERE final_result = 'NOT_SAFE'`
     );
 
     /* ===============================
@@ -47,19 +47,20 @@ export async function GET() {
     /* ===============================
        4. RECENT SCANS (TABLE)
     =============================== */
-    const [recentScans]: any = await connection.query(
-      `SELECT
-        image_name,
-        image_tag,
-        registry_type,
-        predicted_vulnerabilities,
-        scan_time,
-        model_decision,
-        decision
-      FROM scan_results
-      ORDER BY scan_time DESC
-      LIMIT 5`
-    );
+    const [recentScans]: any = await connection.query(`
+    SELECT
+      image_name,
+      image_tag,
+      registry_type,
+      predicted_vulnerabilities,
+      scan_time,
+      final_decision,
+      final_result
+    FROM scan_results
+    ORDER BY scan_time DESC
+    LIMIT 5
+  `);
+
 
 
     /* ===============================
@@ -80,8 +81,8 @@ export async function GET() {
     const [registries]: any = await connection.query(
       `SELECT 
         registry_type,
-        SUM(CASE WHEN model_decision = 'SECURE' THEN 1 ELSE 0 END) AS secure,
-        SUM(CASE WHEN model_decision = 'NOT SECURE' THEN 1 ELSE 0 END) AS anomalous
+        SUM(CASE WHEN final_result = 'SAFE' THEN 1 ELSE 0 END) AS secure,
+        SUM(CASE WHEN final_result = 'NOT_SAFE' THEN 1 ELSE 0 END) AS anomalous
        FROM scan_results
        GROUP BY registry_type`
     );

@@ -6,6 +6,8 @@ import RecentScansTable from "@/components/RecentScansTable";
 import VulnerabilityDonut from "@/components/VulnerabilityDonut";
 import RegistryOverview from "@/components/RegistryOverview";
 import SecurityAlertsList from "@/components/SecurityAlertsList";
+import DeploymentTrendChart from "@/components/DeploymentTrendChart";
+import DeploymentBarChart from "@/components/DeploymentBarChart";
 import { getOverviewData } from "../services/overviewService";
 import { useAlertContext } from "@/app/layout"; 
 
@@ -26,8 +28,12 @@ export default function OverviewDashboard() {
         registry_type: s.registry_type,    
         predicted_vulnerabilities: s.vulnerabilities ?? 0,
         scan_time: s.scanned_at || s.scan_time,
-        model_decision: s.model_decision,              
-        decision: s.decision 
+        supervised_decision: s.supervised_decision,
+        supervised_result: s.supervised_result,
+        anomaly_decision: s.anomaly_decision,
+        anomaly_result: s.anomaly_result,
+        final_decision: s.final_decision,
+        final_result: s.final_result
       }));
 
       setOverview({
@@ -61,6 +67,15 @@ export default function OverviewDashboard() {
       body: JSON.stringify({ alertId })
     }).catch(console.error);
   };
+
+  const lastUpdated = overview.last_scan_time || new Date().toLocaleString();
+
+  // Calculate pending safely
+  const pending = Math.max(
+    (overview.total_deployed_expected || 0) - 
+    ((overview.secure_count || 0) + (overview.blocked_count || 0)),
+    0
+  );
 
 
   return (
@@ -121,6 +136,25 @@ export default function OverviewDashboard() {
           alerts={overview.alerts}
           onAlertViewed={handleAlertViewed} // pass handler to child
         />
+      </div>
+
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <DeploymentTrendChart
+            data={overview.deployment_trend || [
+              { date: "Jan 1", deployed: 0 },
+              { date: "Jan 2", deployed: 0 },
+            ]}
+          />
+        </div>
+        <div className="lg:col-span-1 h-full">
+          <DeploymentBarChart
+            totalDeployed={overview.secure_count || 0}
+            totalBlocked={overview.blocked_count || 0}
+            totalPending={pending}
+            lastUpdated={lastUpdated} // Pass last update time here
+          />
+        </div>
       </div>
     </div>
   );

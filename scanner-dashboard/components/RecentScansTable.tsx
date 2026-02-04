@@ -6,8 +6,8 @@ interface Scan {
   registry_type: "public" | "private";
   predicted_vulnerabilities: number;
   scan_time: string;
-  model_decision: "SECURE" | "NOT SECURE" | "NORMAL" | "ANOMALY" | null;
-  decision: "ALLOW" | "DENY";
+  final_result?: "SAFE" | "NOT_SAFE";
+  final_decision?: "ALLOW" | "DENY";
 }
 
 interface RecentScansTableProps {
@@ -16,7 +16,7 @@ interface RecentScansTableProps {
 
 export default function RecentScansTable({ scans }: RecentScansTableProps) {
   return (
-    <div className="bg-white shadow rounded-lg p-4">
+    <div className="bg-white shadow rounded-lg p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-900">Recent Image Scans</h3>
@@ -69,25 +69,24 @@ export default function RecentScansTable({ scans }: RecentScansTableProps) {
               <div className="flex justify-center">
                 <span
                   className={`px-3 py-1 rounded-md text-sm font-semibold text-white ${
-                    scan.model_decision === "SECURE" ||
-                    scan.model_decision === "NORMAL"
+                    scan.final_result === "SAFE"
                       ? "bg-green-600"
                       : "bg-red-600"
                   }`}
                 >
-                  {scan.model_decision ?? "N/A"}
+                  {scan.final_result ?? "N/A"}
                 </span>
               </div>
 
               {/* Decision */}
               <div
                 className={`font-semibold ${
-                  scan.decision === "ALLOW"
+                  scan.final_decision === "ALLOW"
                     ? "text-green-600"
                     : "text-red-600"
                 }`}
               >
-                {scan.decision}
+                {scan.final_decision ?? "N/A"}
               </div>
             </div>
           ))}

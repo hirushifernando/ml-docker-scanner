@@ -77,23 +77,46 @@ def run_scan(image_name: str, source: str):
     features = extract_features_from_image(image_name)
     result = scan_image(image_name)
 
+    # ---------------- FINAL DECISION LOGIC ----------------
+    # Supervised model interpretation
+    supervised_decision = "ALLOW" if result["secure_prediction"] == 1 else "DENY"
+    supervised_result = "SECURE" if result["secure_prediction"] == 1 else "NOT_SECURE"
 
+    # Anomaly model interpretation
+    anomaly_decision = "DENY" if result["anomaly_prediction"] == -1 else "ALLOW"
+    anomaly_result = "ANOMALY" if result["anomaly_prediction"] == -1 else "NORMAL"
+
+    # ---- FINAL POLICY (single source of truth) ----
+    if supervised_decision == "DENY":
+        final_decision = "DENY"
+        final_result = "NOT_SAFE"
+    elif anomaly_decision == "DENY":
+        final_decision = "DENY"
+        final_result = "NOT_SAFE"
+    else:
+        final_decision = "ALLOW"
+        final_result = "SAFE"
+    
     # Normalize result keys for UI and DB
     db_result = {
         "image_name": image_name,
         "image_tag": image_name.split(":")[-1],
         "registry_type": "public" if source.lower() in ["dockerhub", "public"] else "private",
+        "supervised_decision": supervised_decision,
+        "supervised_result": supervised_result,
+        "anomaly_decision": anomaly_decision,
+        "anomaly_result": anomaly_result,
         "predicted_vulnerabilities": result.get("predicted_vulnerabilities", 0),
         "critical_count": result.get("critical_count", 0),
         "high_count": result.get("high_count", 0),
         "medium_count": result.get("medium_count", 0),
         "low_count": result.get("low_count", 0),
-        "decision": result.get("decision", "DENY"),
+        "final_decision": final_decision,
+        "final_result": final_result,
         "supervised_explanation": result.get("supervised_explanation") or [],
         "classification_explanation": result.get("classification_explanation") or [],
         "unsupervised_explanation": result.get("unsupervised_explanation") or [],
         "interpretation": result.get("interpretation", ""),
-        "model_decision": result.get("model_decision", "NOT SECURE"),
         "ml_timestamp": result.get("ml_timestamp"),
         "scan_time": result.get("scan_time") or datetime.now(timezone.utc)
     }
@@ -106,15 +129,15 @@ def run_scan(image_name: str, source: str):
     save_result_to_db(image_name, source, db_result)
 
     # ---------------- DEPLOY IF SECURE ----------------
-    if db_result.get("decision") == "ALLOW":
-        print(f"✅ Image {image_name} is secure. Deploying to EC2...")
+    if db_result["final_decision"] == "ALLOW":
+        print(f"✅ Image {image_name} is SAFE. Deploying to EC2...")
         deploy_to_ec2(
             image_name=image_name,
             container_name=f"container_{db_result['image_tag']}",
             run_options=DOCKER_RUN_OPTIONS
         )
     else:
-        print(f"❌ Image {image_name} is insecure. Deployment blocked.")
+        print(f"❌ Image {image_name} is NOT SAFE. Deployment blocked.")
 
     return db_result
 
@@ -223,18 +246,6 @@ def save_result_to_db(image_name, source, result):
     # Use scan_time or current UTC
     scan_time = result.get("scan_time") or datetime.now(timezone.utc)
 
-    # ----- FIXED: MAP model_decision TO decision -----
-    model_decision = result.get("model_decision", "NOT SECURE")
-    if model_decision == "SECURE":
-        decision = "ALLOW"
-    elif model_decision == "NOT SECURE":
-        decision = "DENY"
-    elif model_decision in ["ANOMALY", "NORMAL"]:
-        # Optional: set rules for anomaly detection
-        decision = "DENY" if model_decision == "ANOMALY" else "ALLOW"
-    else:
-        decision = "DENY"  # fallback safety
-
     try:
         cursor = conn.cursor()
 
@@ -242,10 +253,12 @@ def save_result_to_db(image_name, source, result):
         INSERT INTO scan_results (
             image_name, image_tag, registry_type, predicted_vulnerabilities,
             critical_count, high_count, medium_count, low_count,
-            decision, supervised_explanation, classification_explanation,
-            unsupervised_explanation, interpretation, model_decision,
-            ml_timestamp, scan_time
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            supervised_decision, supervised_result,
+            anomaly_decision, anomaly_result,
+            final_decision, final_result,
+            supervised_explanation, classification_explanation, unsupervised_explanation,
+            interpretation, ml_timestamp, scan_time
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         cursor.execute(insert_query, (
@@ -257,12 +270,16 @@ def save_result_to_db(image_name, source, result):
             result.get("high_count", 0),
             result.get("medium_count", 0),
             result.get("low_count", 0),
-            decision,
+            result.get("supervised_decision", "DENY"),
+            result.get("supervised_result", "NOT_SECURE"),
+            result.get("anomaly_decision", "DENY"),
+            result.get("anomaly_result", "ANOMALY"),
+            result.get("final_decision", "DENY"),
+            result.get("final_result", "NOT_SAFE"),
             supervised_expl_json,
             classification_expl_json,
             unsupervised_expl_json,
             result.get("interpretation", ""),
-            result.get("model_decision", "NOT SECURE"),
             result.get("ml_timestamp"),
             scan_time
         ))

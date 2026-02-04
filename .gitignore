@@ -55,3 +55,4 @@ anomaly-image/
 docker_test_images/
 not-secure-image/
 secure-image/
+tiny-test-image/

@@ -64,20 +64,17 @@ def scan_image(image_name: str):
         )
 
         # -------- Decision --------
-        if anomaly_result == -1 or secure_prediction == 0:
-            decision = "BLOCK"
-            severity = "HIGH"
-        else:
-            decision = "ALLOW"
-            severity = "LOW"
-
         return {
             "image_name": image_name,
-            "secure_prediction": secure_prediction,
+
+            # ----- supervised -----
+            "secure_prediction": secure_prediction,  # 1 = secure, 0 = not secure
             "predicted_vulnerabilities": vulnerability_count,
-            "anomaly_detected": anomaly_result == -1,
-            "severity": severity,
-            "decision": decision,
+
+            # ----- anomaly -----
+            "anomaly_prediction": anomaly_result,  # -1 = anomaly, 1 = normal
+
+            # ----- explanations -----
             "supervised_explanation": supervised_explanation,
             "unsupervised_explanation": unsupervised_explanation
         }
