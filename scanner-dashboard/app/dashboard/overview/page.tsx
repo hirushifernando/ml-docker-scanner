@@ -19,27 +19,18 @@ export default function OverviewDashboard() {
 
   /* ================== FETCH DASHBOARD DATA ================== */
   const fetchOverview = async () => {
+
     try {
+
       const data = await getOverviewData();
-      const deploymentTrend = (data.deployments || []).reduce((acc: any, item: any) => {
-        const date = new Date(item.deployed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        const existing = acc.find((d: any) => d.date === date);
-        if (existing) {
-          existing.deployed += 1;
-        } else {
-          acc.push({ date, deployed: 1 });
-        }
-        return acc;
-      }, []);
 
-      console.log("Deployments from API:", data.deployments);
-      console.log("Aggregated trend:", deploymentTrend);
+      console.log("Dashboard API response:", data);
 
-      const mappedRecentScans = data.recent_scans.map((s: any) => ({
+      const mappedRecentScans = (data.recent_scans || []).map((s: any) => ({
         image_name: s.image || s.image_name,
         image_tag: s.tag || s.image_tag,
-        registry_type: s.registry_type,    
-        predicted_vulnerabilities: s.vulnerabilities ?? 0,
+        registry_type: s.registry_type,
+        predicted_vulnerabilities: s.vulnerabilities ?? s.predicted_vulnerabilities ?? 0,
         scan_time: s.scanned_at || s.scan_time,
         supervised_decision: s.supervised_decision,
         supervised_result: s.supervised_result,
@@ -49,17 +40,36 @@ export default function OverviewDashboard() {
         final_result: s.final_result
       }));
 
+       // Calculate totals from deployment_trend
+       const deploymentTrend = data.deployment_trend || [];
+        const deploymentTotals = deploymentTrend.reduce(
+          (acc: any, item: any) => {
+            acc.deployed += item.deployed || 0;
+            acc.blocked += item.blocked || 0;
+            acc.pending += item.pending || 0;
+            return acc;
+          },
+          { deployed: 0, blocked: 0, pending: 0 }
+        );
+      
       setOverview({
         ...data,
         recent_scans: mappedRecentScans,
-        deployment_trend: deploymentTrend.length > 0 ? deploymentTrend : [{ date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }), deployed: 0 }],
+        deployment_trend: deploymentTrend,
+        pending_count: deploymentTotals.pending,  // optional if you want to track separately
+        deploymentTotals, // store totals for bar chart
       });
 
       setUnseenAlerts(data.unseen_alerts || 0);
+
     } catch (err) {
+
       console.error("Failed to fetch overview:", err);
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -83,13 +93,6 @@ export default function OverviewDashboard() {
   };
 
   const lastUpdated = overview.last_scan_time || new Date().toLocaleString();
-
-  // Calculate pending safely
-  const pending = Math.max(
-    (overview.total_deployed_expected || 0) - 
-    ((overview.secure_count || 0) + (overview.blocked_count || 0)),
-    0
-  );
 
 
   return (
@@ -160,10 +163,10 @@ export default function OverviewDashboard() {
         </div>
         <div className="lg:col-span-1 h-full">
           <DeploymentBarChart
-            totalDeployed={overview.secure_count || 0}
-            totalBlocked={overview.blocked_count || 0}
-            totalPending={pending}
-            lastUpdated={lastUpdated} // Pass last update time here
+            totalDeployed={overview.deploymentTotals.deployed}
+            totalBlocked={overview.deploymentTotals.blocked}
+            totalPending={overview.deploymentTotals.pending}
+            lastUpdated={lastUpdated}
           />
         </div>
       </div>

@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
 const pool = mysql.createPool({
-    host:"localhost",
-    user:"scanner_user",
-    password:"StrongPass123!",
-    database:"scanner_db"
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "scanner_user",
+  password: process.env.DB_PASSWORD || "StrongPass123!",
+  database: process.env.DB_NAME || "scanner_db",
+  waitForConnections: true,
+  connectionLimit: 10
 });
 
 
@@ -87,8 +89,6 @@ export async function GET() {
        GROUP BY registry_type`
     );
 
-    connection.release();
-
     /* ===============================
        7. FETCH SECURITY ALERTS
        (ALERTS ARE CREATED DURING SCAN)
@@ -109,6 +109,39 @@ export async function GET() {
        WHERE seen = 0`
     );
 
+
+    /* ===============================
+        FETCH DEPLOYMENT TREND
+      =============================== */
+    const [deployments]: any = await connection.query(
+      `SELECT deployed_at, status
+      FROM deployments
+      ORDER BY deployed_at ASC`
+    );
+
+    // Calculate total blocked / pending / deployed
+    const blockedCount = deployments.filter((d: any) => d.status === "blocked").length;
+    const pendingCount = deployments.filter((d: any) => d.status === "pending").length;
+    const deployedCount = deployments.filter((d: any) => d.status === "deployed").length;
+
+    // Transform deployments for chart
+    const deploymentTrend = deployments.reduce((acc: any, item: any) => {
+      const date = new Date(item.deployed_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      
+      if (!acc[date]) acc[date] = { deployed: 0, blocked: 0, pending: 0 };
+      
+      // status is one of "deployed", "blocked", "pending"
+      acc[date][item.status] += 1;
+      
+      return acc;
+    }, {});
+
+    // Convert object to array for chart
+    const deploymentTrendArray = Object.keys(deploymentTrend).map(date => ({
+      date,
+      ...deploymentTrend[date]
+    }));
+
     /* ===============================
        FINAL DASHBOARD RESPONSE
     =============================== */
@@ -116,6 +149,9 @@ export async function GET() {
       total_scanned: total.total_scanned,
       secure_count: secure.secure_count,
       vulnerable_count: notSecure.vulnerable_count,
+      blocked_count: blockedCount,             
+      pending_count: pendingCount, 
+      deployed_count: deployedCount,
       last_scan_time: lastScan.last_scan_time,
       recent_scans: recentScans,
       vulnerability_breakdown: breakdown,
@@ -129,6 +165,7 @@ export async function GET() {
         isNew: !a.seen,
       })),
       unseen_alerts: unseenCount.unseen,
+      deployment_trend: deploymentTrendArray
     });
 
   } catch (error: any) {

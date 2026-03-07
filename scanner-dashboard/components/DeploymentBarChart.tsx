@@ -18,7 +18,7 @@ export default function DeploymentBarChart({
   lastUpdated,
 }: DeploymentBarChartProps) {
   const data = [
-    { name: "Secure", value: totalDeployed, fill: "#22c55e" }, // green
+    { name: "Deployed", value: totalDeployed, fill: "#22c55e" }, // green
     { name: "Blocked", value: totalBlocked, fill: "#ef4444" },  // red
     { name: "Pending", value: totalPending, fill: "#facc15" },  // yellow
   ];
@@ -44,7 +44,7 @@ export default function DeploymentBarChart({
             tick={{ fill: "#707070", fontSize: 15 }}
             allowDecimals={false}
             label={{
-              value: "Deployments",
+              value: "Docker Images",
               angle: -90,
               position: "center",
               dx: -20,
@@ -66,7 +66,7 @@ export default function DeploymentBarChart({
             itemStyle={{
               color: "#e5e7eb",
             }}
-            formatter={(value) => [`${value}`, "Deployments"]}
+            formatter={(value) => [`${value}`, "Images"]}
           />
           {/* ONE Bar for all data */}
           <Bar dataKey="value">

@@ -1,19 +1,27 @@
 // components/DeploymentTrendChart.tsx
 "use client";
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, Legend } from "recharts";
 import { ShieldCheckIcon } from "@heroicons/react/24/solid";
 
 interface TrendData {
-  date: string;      // X-axis (Date)
-  deployed: number; // Y-axis (Deployment count)
+  date: string;      
+  deployed: number;
+  blocked: number;
+  pending: number;
 }
+
 
 interface DeploymentTrendChartProps {
   data: TrendData[];
 }
 
+
 export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps) {
+  const chartData =
+    data.length > 0
+      ? data
+      : [{ date: "No Data", deployed: 0, blocked: 0, pending: 0 }];
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-bold text-gray-900">Deployment Status</h2>
@@ -25,7 +33,7 @@ export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps
       </div>
 
       <ResponsiveContainer width="100%" height={250}>
-         <LineChart data={data.length ? data : [{ date: "No Data", deployed: 0 }]} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ddddde" />
 
           {/* Horizontal axis → Date */}
@@ -51,6 +59,15 @@ export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps
           />
 
           <Tooltip
+            formatter={(value: any, name: any) => {
+              const labels: Record<string, string> = {
+                deployed: "Deployed",
+                blocked: "Blocked",
+                pending: "Pending",
+              };
+
+              return [value, labels[name] || name] as [number | string, string];
+            }}
             contentStyle={{
               backgroundColor: "#111827",
               border: "1px solid #1f2933",
@@ -64,27 +81,22 @@ export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps
             itemStyle={{
               color: "#e5e7eb",   // value text
             }}
-            formatter={(value) => [`${value}`, "Deployments"]}
           />
+          {/* Legend */}
+          <Legend wrapperStyle={{ top: 230 }}/>
 
-          {/* Blue Line */}
-          <Line
-            type="monotone"
-            dataKey="deployed"
-            stroke="#3b82f6"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
-          />
-
-          {/* Blue Area */}
           <Area
-            type="monotone"
-            dataKey="deployed"
-            fill="#3b82f6"
-            fillOpacity={0.15}
-            tooltipType="none"
+          type="monotone"
+          dataKey="deployed"
+          fill="#3b82f6"
+          fillOpacity={0.15}
+          legendType="none"
+          tooltipType="none"
           />
+
+          <Line type="monotone" dataKey="deployed" stroke="#3b82f6" strokeWidth={5} />
+          <Line type="monotone" dataKey="blocked" stroke="#ef4444" strokeWidth={2} />
+          <Line type="monotone" dataKey="pending" stroke="#facc15" strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>
     </div>
