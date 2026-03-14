@@ -7,6 +7,10 @@ from mysql.connector import Error
 import json
 
 from .predict import scan_image
+from typing import List
+
+class MultiDockerImageRequest(BaseModel):
+    image_names: List[str]
 
 # -----------------------------
 # FastAPI App
@@ -80,6 +84,26 @@ def scan_docker_image(request: DockerImageRequest):
             status_code=400,
             detail=f"Error scanning Docker image: {str(e)}"
         )
+
+@app.post("/scan-multiple")
+def scan_multiple_docker_images(request: MultiDockerImageRequest):
+    results = []
+    for image_name in request.image_names:
+        try:
+            result = scan_image(image_name)
+            result["timestamp"] = datetime.utcnow().isoformat()
+            results.append({
+                "image_name": image_name,
+                "status": "success",
+                "data": result
+            })
+        except Exception as e:
+            results.append({
+                "image_name": image_name,
+                "status": "failed",
+                "error": str(e)
+            })
+    return {"results": results}
 
 # -----------------------------
 # 🔥 Fetch Scan Results (Dashboard API)

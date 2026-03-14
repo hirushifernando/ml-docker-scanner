@@ -94,7 +94,7 @@ export default function DeploymentTrendChart({ data }: DeploymentTrendChartProps
           tooltipType="none"
           />
 
-          <Line type="monotone" dataKey="deployed" stroke="#3b82f6" strokeWidth={5} />
+          <Line type="monotone" dataKey="deployed" stroke="#3b82f6" strokeWidth={2} />
           <Line type="monotone" dataKey="blocked" stroke="#ef4444" strokeWidth={2} />
           <Line type="monotone" dataKey="pending" stroke="#facc15" strokeWidth={2} />
         </LineChart>
