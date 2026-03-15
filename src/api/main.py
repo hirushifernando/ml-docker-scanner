@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Summary, Counter, make_asgi_app
 from pydantic import BaseModel
 from datetime import datetime
 import mysql.connector
@@ -11,6 +12,12 @@ from typing import List
 
 class MultiDockerImageRequest(BaseModel):
     image_names: List[str]
+
+# -----------------------------
+# Prometheus Metrics
+# -----------------------------
+REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
+SCAN_COUNT = Counter('docker_image_scans_total', 'Total number of Docker image scans')
 
 # -----------------------------
 # FastAPI App
@@ -33,6 +40,13 @@ app.add_middleware(
 )
 
 # -----------------------------
+# Metrics endpoint
+# -----------------------------
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+
+# -----------------------------
 # DB Connection
 # -----------------------------
 def get_db_connection():
@@ -53,6 +67,8 @@ def get_db_connection():
 class DockerImageRequest(BaseModel):
     image_name: str
 
+class MultiDockerImageRequest(BaseModel):
+    image_names: List[str]
 # -----------------------------
 # Health Check
 # -----------------------------
@@ -70,27 +86,25 @@ def health_check():
 # -----------------------------
 @app.post("/scan")
 def scan_docker_image(request: DockerImageRequest):
+    SCAN_COUNT.inc()  # Increment total scans
     try:
-        result = scan_image(request.image_name)
+        # Measure scan duration
+        result = REQUEST_TIME.time()(scan_image)(request.image_name)  # <-- call properly
         result["timestamp"] = datetime.utcnow().isoformat()
 
-        return {
-            "status": "success",
-            "data": result
-        }
+        return {"status": "success", "data": result}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error scanning Docker image: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Error scanning Docker image: {str(e)}")
+
 
 @app.post("/scan-multiple")
 def scan_multiple_docker_images(request: MultiDockerImageRequest):
     results = []
     for image_name in request.image_names:
+        SCAN_COUNT.inc()
         try:
-            result = scan_image(image_name)
+            result = REQUEST_TIME.time()(scan_image)(image_name)  # <-- call properly
             result["timestamp"] = datetime.utcnow().isoformat()
             results.append({
                 "image_name": image_name,
