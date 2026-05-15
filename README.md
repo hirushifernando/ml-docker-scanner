@@ -42,7 +42,3 @@ The framework improves proactive container security analysis by combining vulner
 Docker images used for testing are not included in the repository.
 Dataset files and trained model files may be excluded due to size and privacy limitations.
 You can add your own Docker image datasets for testing and experimentation.
-
-```bash
-git clone https://github.com/yourusername/docker-image-security-ml-framework.git
-cd docker-image-security-ml-framework
