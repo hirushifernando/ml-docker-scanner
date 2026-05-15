@@ -33,6 +33,40 @@ It demonstrates Docker image feature extraction, vulnerability prediction, anoma
 - Isolation Forest for anomaly detection
 - SHAP for explainable AI visualization
 
+## Dataset Information
+- Dataset size: 1,053 Docker image instances
+- Includes secure and insecure Docker images
+- Features include image size, layers, dependencies, package manager, and vulnerability indicators
+- Data collected from Kaggle Docker security datasets and augmented synthetic samples
+
+## Model Performance
+
+### Regression Model (XGBoost Regressor)
+- RMSE: 100.91
+- R² Score: 0.84
+- Cross-validation R²: 0.78
+
+### Classification Model (XGBoost Classifier)
+- Accuracy: 98.7%
+- Cross-validation Accuracy: 98.39%
+- Weighted F1-Score: 0.99
+
+### Anomaly Detection (Isolation Forest)
+- Detected 39 anomalous Docker images
+- Used for identifying unusual container behavior and security risks
+
+## Explainable AI (SHAP)
+SHAP was integrated to explain model predictions and identify the most influential Docker image features affecting security classification and vulnerability prediction.
+
+## Dataset Features
+- Image Size
+- Number of Layers
+- Installed Packages
+- Dependency Count
+- Package Manager
+- Base Image Type
+- Vulnerability Severity Counts
+
 ## Research Contribution
 
 - This research introduces an explainable Machine Learning framework for identifying insecure Docker images before cloud deployment.
