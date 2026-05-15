@@ -35,10 +35,10 @@ It demonstrates Docker image feature extraction, vulnerability prediction, anoma
 
 ## Research Contribution
 
-This research introduces an explainable Machine Learning framework for identifying insecure Docker images before cloud deployment.
-The framework improves proactive container security analysis by combining vulnerability prediction, anomaly detection, and explainable AI techniques.
+- This research introduces an explainable Machine Learning framework for identifying insecure Docker images before cloud deployment.
+- The framework improves proactive container security analysis by combining vulnerability prediction, anomaly detection, and explainable AI techniques.
 
 ## Note
-Docker images used for testing are not included in the repository.
-Dataset files and trained model files may be excluded due to size and privacy limitations.
-You can add your own Docker image datasets for testing and experimentation.
+- Docker images used for testing are not included in the repository.
+- Dataset files and trained model files may be excluded due to size and privacy limitations.
+- You can add your own Docker image datasets for testing and experimentation.
