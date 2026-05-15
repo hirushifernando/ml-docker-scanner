@@ -1,5 +1,11 @@
 # An Explainable Machine Learning Framework for Multi-Risk Security Assessment and Pre-Deployment Protection of Docker Images in Cloud Deployment Pipelines
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Status](https://img.shields.io/badge/Status-Research%20Project-blue)
+![AI](https://img.shields.io/badge/AI-ML-green)
+![Docker](https://img.shields.io/badge/Docker-Security-blue)
+![ML](https://img.shields.io/badge/XGBoost-Model-orange)
+
 This project is a Machine Learning-based Docker image security assessment system designed to detect insecure container images before deployment in cloud environments.  
 The system combines supervised learning, anomaly detection, and explainable AI techniques to improve container security within CI/CD pipelines.
 
